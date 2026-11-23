@@ -44,6 +44,7 @@ fun RowingScreen(
     onOpen: (Session) -> Unit,
     onHistory: () -> Unit,
     onAboutYou: () -> Unit,
+    onRowerTest: () -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -138,6 +139,9 @@ fun RowingScreen(
             }
             // Birthday, weight, max HR and the heart rate warning apply to rowing too.
             OutlinedButton(onClick = onAboutYou, modifier = Modifier.weight(1f)) { Text("About you") }
+        }
+        TextButton(onClick = onRowerTest, modifier = Modifier.fillMaxWidth()) {
+            Text("Rower test: check what the rower sends over Bluetooth")
         }
         Spacer(Modifier.height(8.dp))
     }

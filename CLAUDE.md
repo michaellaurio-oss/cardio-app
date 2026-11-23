@@ -35,7 +35,10 @@ He is the only user. Explain build and install steps plainly; he is not a day-to
   INTERVAL DONE button calls `endSet()` (recovery clock starts at the tap). Trends/baselines get slam
   sessions only. Screen flow: `StartScreen` (strap + choice only; no History/Settings, Michael wants those
   per workout) → `HomeScreen` (Slam Ball) or `RowingScreen`. History is filtered by where it was opened from.
-  The Rogue Echo Rower's M2 monitor has Bluetooth, but reading it isn't built yet.
+  The Rogue Echo Rower's M2 monitor has Bluetooth, but reading it isn't built yet. `ble/RowerProbe.kt` +
+  `RowerTestScreen` (Rowing → Rower test) is a diagnostic: scans, connects, lists services/characteristics,
+  turns on every notify/indicate, decodes FTMS Rower Data (0x2AD1) if present, and copies a text report
+  for Michael to paste back. Use that report to build real rower reading.
 - Age comes from the stored birthday (`UserSettings.birthDate`), never a stored age.
 
 ## Architecture

@@ -72,6 +72,9 @@ the Slam Ball and Rowing screens rather than the first screen.
   (rest until HR ≤ target, with a minimum rest, works the same way).
 - Each interval records its time, **pace per 500 m** (from the distance and time), average and peak
   heart rate, 1-minute drop and time to target. The Rowing screen lists recent rowing workouts.
+- **Rower test** (bottom of the Rowing screen): connects to the rower's monitor over Bluetooth and
+  shows what it sends, with a Copy report button. It's a step toward reading distance, pace and stroke
+  rate straight from the rower.
 - Rowing has its own History (and CSV export), separate from slam ball's, and isn't in the slam ball
   Trends or baseline comparisons. About you (birthday, weight, max HR, heart rate warning) is
   reachable from both.

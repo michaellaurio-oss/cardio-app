@@ -31,6 +31,7 @@ import com.laurio.slamlog.ui.BaselineScreen
 import com.laurio.slamlog.ui.BaselineSettingsScreen
 import com.laurio.slamlog.ui.HistoryScreen
 import com.laurio.slamlog.ui.HomeScreen
+import com.laurio.slamlog.ui.RowerTestScreen
 import com.laurio.slamlog.ui.RowingScreen
 import com.laurio.slamlog.ui.StartScreen
 import com.laurio.slamlog.ui.SettingsScreen
@@ -57,7 +58,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /** START is the first screen (strap + workout choice); HOME is the Slam Ball screen. */
-private enum class Screen { START, HOME, ROWING, WORKOUT, SUMMARY, HISTORY, TRENDS, SETTINGS, ABOUT_YOU, BASELINE, BASELINE_SETTINGS }
+private enum class Screen { START, HOME, ROWING, ROWER_TEST, WORKOUT, SUMMARY, HISTORY, TRENDS, SETTINGS, ABOUT_YOU, BASELINE, BASELINE_SETTINGS }
 
 private fun neededPermissions(): Array<String> = buildList {
     if (Build.VERSION.SDK_INT >= 31) {
@@ -146,8 +147,10 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onOpen = { shown = it; summaryBack = Screen.ROWING; screen = Screen.SUMMARY },
                 onHistory = { historyBack = Screen.ROWING; screen = Screen.HISTORY },
                 onAboutYou = { aboutBack = Screen.ROWING; screen = Screen.ABOUT_YOU },
+                onRowerTest = { screen = Screen.ROWER_TEST },
                 onBack = { screen = Screen.START },
             )
+            Screen.ROWER_TEST -> RowerTestScreen(vm, onBack = { screen = Screen.ROWING })
             Screen.WORKOUT -> WorkoutScreen(vm)
             Screen.SUMMARY -> {
                 val s = shown

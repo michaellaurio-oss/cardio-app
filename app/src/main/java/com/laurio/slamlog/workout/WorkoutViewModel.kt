@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.laurio.slamlog.audio.SlamDetector
 import com.laurio.slamlog.audio.Speaker
 import com.laurio.slamlog.ble.HeartRateManager
+import com.laurio.slamlog.ble.RowerProbe
 import com.laurio.slamlog.data.Activity
 import com.laurio.slamlog.data.Session
 import com.laurio.slamlog.data.SessionStore
@@ -75,6 +76,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     val config: StateFlow<WorkoutConfig> = _config
 
     val hr = HeartRateManager(app, settingsStore)
+    /** Rower test (Rowing screen): what the rower's monitor offers over Bluetooth. */
+    val rower = RowerProbe(app)
     private val speaker = Speaker(app).also { it.voiceEnabled = _settings.value.voice }
     private val detector = SlamDetector(
         onSlam = { main.post { onSlam() } },
@@ -707,6 +710,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         stopService()
         detector.stop()
         hr.release()
+        rower.stopScan()
+        rower.disconnect()
         speaker.shutdown()
     }
 
