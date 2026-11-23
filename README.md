@@ -85,8 +85,9 @@ the Slam Ball and Rowing screens rather than the first screen.
   latest workout's first half vs second half, meters per week, and bests. Each chart says whether the
   latest workout beat your previous three.
 - Rowing has its own History (and CSV export), separate from slam ball's, and isn't in the slam ball
-  Trends or baseline comparisons. About you (birthday, weight, max HR, heart rate warning) is
-  reachable from both.
+  Trends or baseline comparisons.
+- **About you** (birthday, weight, max HR, heart rate warning) is on the first screen, since it applies
+  to both workouts.
 
 ## Everything else
 
@@ -156,9 +157,9 @@ the Play Store would use a private upload key instead.
 
 1. On first launch, allow **Nearby devices** (strap) and **Microphone** (slam counting).
 2. Wet the strap's electrode pads and put it on; the H808S wakes up on skin contact.
-3. Home → **Find strap** → **Connect**. Afterwards it reconnects on its own.
-4. Settings → **About you**: set **birthday** and **body weight**; set **max heart rate** if you know it.
-5. Settings → **Test slam detection**: do 10 slams and check the count. Too many → lower sensitivity;
+3. First screen → **Find strap** → **Connect**. Afterwards it reconnects on its own.
+4. First screen → **About you**: set **birthday** and **body weight**; set **max heart rate** if you know it.
+5. Slam Ball → Settings → **Test slam detection**: do 10 slams and check the count. Too many → lower sensitivity;
    missing slams → raise it.
 6. Put the phone a few feet from where the ball lands, screen up, and press **Start**.
 

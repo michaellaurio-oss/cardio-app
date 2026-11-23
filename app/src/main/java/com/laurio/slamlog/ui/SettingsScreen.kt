@@ -34,7 +34,7 @@ import com.laurio.slamlog.workout.WorkoutViewModel
 import com.laurio.slamlog.workout.mmss
 
 @Composable
-fun SettingsScreen(vm: WorkoutViewModel, onRequestPermissions: () -> Unit, onAboutYou: () -> Unit, onBack: () -> Unit) {
+fun SettingsScreen(vm: WorkoutViewModel, onRequestPermissions: () -> Unit, onBack: () -> Unit) {
     val s by vm.settings.collectAsState()
     val testing by vm.testing.collectAsState()
     val testCount by vm.testCount.collectAsState()
@@ -55,22 +55,6 @@ fun SettingsScreen(vm: WorkoutViewModel, onRequestPermissions: () -> Unit, onAbo
             Text("SETTINGS", fontSize = 26.sp, fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
             TextButton(onClick = onBack) { Text("Back") }
-        }
-
-        // ---- About you (own screen) ----
-        SectionCard(Modifier.clickable(onClick = onAboutYou)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("About you", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(
-                        (if (s.hasBirthday) "Age ${s.age}" else "Birthday not set") +
-                            " · ${s.weightLbs} lb · max HR ${s.maxHr}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (s.hasBirthday) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
-                    )
-                }
-                Text("›", fontSize = 28.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
         }
 
         // ---- Slam detection ----

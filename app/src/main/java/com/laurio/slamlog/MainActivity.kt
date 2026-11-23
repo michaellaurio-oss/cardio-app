@@ -84,8 +84,8 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
     var rowTrendsBack by rememberSaveable { mutableStateOf(Screen.ROWING) }
     // Where Trends' Back goes (Home, or Baseline when opened from there).
     var trendsBack by rememberSaveable { mutableStateOf(Screen.HOME) }
-    // Where About you's Back goes (Settings, or Home when opened from the birthday reminder).
-    var aboutBack by rememberSaveable { mutableStateOf(Screen.SETTINGS) }
+    // Where About you's Back goes (it's only opened from the first screen now).
+    var aboutBack by rememberSaveable { mutableStateOf(Screen.START) }
     var shown by remember { mutableStateOf<Session?>(null) }
     val ui by vm.ui.collectAsState()
     val settings by vm.settings.collectAsState()
@@ -140,7 +140,6 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onHistory = { historyBack = Screen.HOME; screen = Screen.HISTORY },
                 onTrends = { trendsBack = Screen.HOME; screen = Screen.TRENDS },
                 onSettings = { settingsBack = Screen.HOME; screen = Screen.SETTINGS },
-                onAboutYou = { aboutBack = Screen.HOME; screen = Screen.ABOUT_YOU },
                 onBack = { screen = Screen.START },
             )
             Screen.ROWING -> RowingScreen(
@@ -148,7 +147,6 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onStart = { workoutFrom = Screen.ROWING; vm.startRowing(); screen = Screen.WORKOUT },
                 onOpen = { shown = it; summaryBack = Screen.ROWING; screen = Screen.SUMMARY },
                 onHistory = { historyBack = Screen.ROWING; screen = Screen.HISTORY },
-                onAboutYou = { aboutBack = Screen.ROWING; screen = Screen.ABOUT_YOU },
                 onRowerTest = { screen = Screen.ROWER_TEST },
                 onTrends = { rowTrendsBack = Screen.ROWING; screen = Screen.ROW_TRENDS },
                 onBack = { screen = Screen.START },
@@ -201,7 +199,6 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
             Screen.SETTINGS -> SettingsScreen(
                 vm,
                 onRequestPermissions = requestPermissions,
-                onAboutYou = { aboutBack = Screen.SETTINGS; screen = Screen.ABOUT_YOU },
                 onBack = { screen = settingsBack },
             )
             Screen.ABOUT_YOU -> AboutYouScreen(vm, onBack = { screen = aboutBack })

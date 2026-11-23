@@ -39,7 +39,6 @@ fun HomeScreen(
     onHistory: () -> Unit,
     onTrends: () -> Unit,
     onSettings: () -> Unit,
-    onAboutYou: () -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -59,19 +58,6 @@ fun HomeScreen(
             Text("SLAM BALL", fontSize = 28.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f))
             TextButton(onClick = onBack) { Text("Back") }
-        }
-
-        if (!settings.hasBirthday) {
-            SectionCard {
-                Text("Add your birthday", fontWeight = FontWeight.Bold)
-                Text(
-                    "Heart rate zones and max heart rate are based on your age. Until you add your birthday, " +
-                        "they assume you're ${settings.age}.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(onClick = onAboutYou) { Text("Add birthday") }
-            }
         }
 
         HeartRateCard(vm, onRequestPermissions)

@@ -1,5 +1,7 @@
 package com.laurio.slamlog.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +63,23 @@ fun StartScreen(
         Label("Choose a workout")
         WorkoutChoice("SLAM BALL", "Sets of slams, counted by the mic", Orange, onSlamBall)
         WorkoutChoice("ROWING MACHINE", "Intervals with rest until your heart rate recovers", Sky, onRowing)
+
+        // About you: birthday, weight, max HR and the heart rate warning, shared by both workouts.
+        SectionCard(Modifier.clickable(onClick = onAboutYou)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("About you", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        (if (settings.hasBirthday) "Age ${settings.age}" else "Birthday not set") +
+                            " · ${settings.weightLbs} lb · max HR ${settings.maxHr}" +
+                            if (settings.hrAlarm) " · warning at ${settings.alarmBpm}" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (settings.hasBirthday) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                    )
+                }
+                Text("›", fontSize = 28.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
 
         Spacer(Modifier.height(8.dp))
     }

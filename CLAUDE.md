@@ -74,7 +74,7 @@ Single-activity Jetpack Compose app, no DI, no database library.
   `startWorkout()`, updates the notification via `pushStatus()`, stops it in `finish()`/`cancel()`/`onCleared()`.
 - `data/`: `Models.kt` (JSON (de)serialization, so new fields must default safely for old saved
   workouts), `SessionStore.kt` (sessions.json in app storage), `SettingsStore.kt` (SharedPreferences).
-- `ui/`: one file per screen (personal details live on `AboutYouScreen`, opened from Settings; the baseline test has
+- `ui/`: one file per screen (personal details live on `AboutYouScreen`, opened only from `StartScreen`; the baseline test has
   `BaselineScreen` (Home → BASELINE) and `BaselineSettingsScreen` (from its bottom button)), plus `Components.kt`, `SlamEffects.kt` (burst/pop/shake), `Effort.kt`.
 
 When adding a field to `Session`, `SetResult` or `UserSettings`: give it a default, write it in
