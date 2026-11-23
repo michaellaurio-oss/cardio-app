@@ -76,7 +76,7 @@ data class UserSettings(
     val rowDistanceM: Int = 500,
     /** Rowing intervals by time instead of distance, and the time each. */
     val rowByTime: Boolean = false,
-    val rowIntervalSec: Int = 60,
+    val rowIntervalSec: Int = 300,
     val rowResistance: Int = 5,
     val rowRestUntilTarget: Boolean = true,
     val rowMinRestSec: Int = 60,

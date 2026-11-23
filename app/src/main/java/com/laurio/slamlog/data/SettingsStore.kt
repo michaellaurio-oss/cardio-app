@@ -27,7 +27,7 @@ class SettingsStore(context: Context) {
         rowIntervals = p.getInt("rowIntervals", 8),
         rowDistanceM = p.getInt("rowDistanceM", 500),
         rowByTime = p.getBoolean("rowByTime", false),
-        rowIntervalSec = p.getInt("rowIntervalSec", 60),
+        rowIntervalSec = p.getInt("rowIntervalSec", 300),
         rowResistance = p.getInt("rowResistance", 5),
         rowRestUntilTarget = p.getBoolean("rowRestUntilTarget", true),
         rowMinRestSec = p.getInt("rowMinRestSec", 60),
