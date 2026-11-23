@@ -35,10 +35,15 @@ He is the only user. Explain build and install steps plainly; he is not a day-to
   INTERVAL DONE button calls `endSet()` (recovery clock starts at the tap). Trends/baselines get slam
   sessions only. Screen flow: `StartScreen` (strap + choice only; no History/Settings, Michael wants those
   per workout) → `HomeScreen` (Slam Ball) or `RowingScreen`. History is filtered by where it was opened from.
-  The Rogue Echo Rower's M2 monitor has Bluetooth, but reading it isn't built yet. `ble/RowerProbe.kt` +
-  `RowerTestScreen` (Rowing → Rower test) is a diagnostic: scans, connects, lists services/characteristics,
-  turns on every notify/indicate, decodes FTMS Rower Data (0x2AD1) if present, and copies a text report
-  for Michael to paste back. Use that report to build real rower reading.
+  The Rogue Echo Rower's M2 monitor ("ROGUE CONSOLE nnnnnn", model IP0500, fw 1.0.47) speaks standard FTMS:
+  Rower Data 0x2AD1 about 1/s with stroke rate+count, avg stroke rate, total distance, pace, avg pace,
+  power, avg power, "resistance" (reads ~147, probably a drag factor), energy, HR (0), elapsed. It also has a
+  vendor service 0000fff0-…-e50e24dcca9e (fff1 notify / fff2 write), unused. The monitor must be on
+  Connect App and takes one connection at a time. `ble/RowerManager.kt` connects (saved address in
+  `SettingsStore.rowerAddress`, auto-retry on drop) and parses; the VM's `onRowerData` counts meters per
+  interval from increases of the monitor's distance (resets/rest rowing ignored), ends the interval at
+  `distanceM`, and stores `SetResult.meters/strokes/avgSpm/avgWatts`. Without the rower, INTERVAL DONE.
+  `ble/RowerProbe.kt` + `RowerTestScreen` (Rowing → Rower test) is the diagnostic that found all this.
 - Age comes from the stored birthday (`UserSettings.birthDate`), never a stored age.
 
 ## Architecture

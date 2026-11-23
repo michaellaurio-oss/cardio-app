@@ -123,6 +123,11 @@ data class SetResult(
     val targetHr: Int = 0,
     /** Seconds from the last slam of the set until HR fell to [targetHr]; null if it didn't get there. */
     val timeToTargetSec: Int? = null,
+    /** Rowing, read from the rower: meters actually rowed, strokes, average stroke rate and watts (0 = not read). */
+    val meters: Int = 0,
+    val strokes: Int = 0,
+    val avgSpm: Double = 0.0,
+    val avgWatts: Int = 0,
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("number", number)
@@ -134,6 +139,10 @@ data class SetResult(
         .put("recoverySec", recoverySec)
         .put("targetHr", targetHr)
         .put("timeToTargetSec", timeToTargetSec ?: JSONObject.NULL)
+        .put("meters", meters)
+        .put("strokes", strokes)
+        .put("avgSpm", avgSpm)
+        .put("avgWatts", avgWatts)
 
     companion object {
         fun fromJson(o: JSONObject) = SetResult(
@@ -146,6 +155,10 @@ data class SetResult(
             recoverySec = o.optInt("recoverySec"),
             targetHr = o.optInt("targetHr"),
             timeToTargetSec = if (o.isNull("timeToTargetSec")) null else o.optInt("timeToTargetSec"),
+            meters = o.optInt("meters", 0),
+            strokes = o.optInt("strokes", 0),
+            avgSpm = o.optDouble("avgSpm", 0.0),
+            avgWatts = o.optInt("avgWatts", 0),
         )
     }
 }
@@ -185,12 +198,18 @@ data class Session(
 
     val isRow: Boolean get() = activity == Activity.ROW
 
-    /** Rowing: meters rowed (finished intervals × distance). */
-    val totalMeters: Int get() = if (isRow) sets.size * distanceM else 0
+    /** Rowing: meters rowed (as read from the rower, else intervals × planned distance). */
+    val totalMeters: Int get() = if (isRow) sets.sumOf { if (it.meters > 0) it.meters else distanceM } else 0
 
     /** Rowing: an interval's pace, in seconds per 500 m; null without a distance or time. */
-    fun pace500(set: SetResult): Double? =
-        if (isRow && distanceM > 0 && set.durationSec > 0) set.durationSec * 500.0 / distanceM else null
+    fun pace500(set: SetResult): Double? {
+        val m = if (set.meters > 0) set.meters else distanceM
+        return if (isRow && m > 0 && set.durationSec > 0) set.durationSec * 500.0 / m else null
+    }
+
+    /** Rowing: averages over intervals that were read from the rower; null if none were. */
+    val avgSpm: Double? get() = sets.map { it.avgSpm }.filter { it > 0 }.takeIf { it.isNotEmpty() }?.average()
+    val avgWatts: Double? get() = sets.map { it.avgWatts }.filter { it > 0 }.takeIf { it.isNotEmpty() }?.average()
 
     /** Rowing: average pace per 500 m over the intervals. */
     val avgPace500: Double?

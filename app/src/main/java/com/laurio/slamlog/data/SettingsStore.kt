@@ -92,4 +92,13 @@ class SettingsStore(context: Context) {
     var deviceName: String?
         get() = p.getString("deviceName", null)
         set(v) = p.edit().putString("deviceName", v).apply()
+
+    /** The rowing machine's monitor (FTMS), saved once connected. */
+    var rowerAddress: String?
+        get() = p.getString("rowerAddress", null)
+        set(v) = p.edit().putString("rowerAddress", v).apply()
+
+    var rowerName: String?
+        get() = p.getString("rowerName", null)
+        set(v) = p.edit().putString("rowerName", v).apply()
 }

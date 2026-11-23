@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.laurio.slamlog.ble.HeartRateManager.State
+import com.laurio.slamlog.ble.RowerManager
 import com.laurio.slamlog.data.Session
 import com.laurio.slamlog.workout.WorkoutViewModel
 import com.laurio.slamlog.workout.mmss
@@ -53,6 +54,12 @@ fun RowingScreen(
     val state by vm.hr.state.collectAsState()
     val bpm by vm.hr.heartRate.collectAsState()
     val rows = sessions.filter { it.isRow }
+    val rState by vm.rowMachine.state.collectAsState()
+    val rName by vm.rowMachine.name.collectAsState()
+    val rDevices by vm.rowMachine.devices.collectAsState()
+    val rError by vm.rowMachine.error.collectAsState()
+    val rData by vm.rowMachine.data.collectAsState()
+    val rowerOn = rState == RowerManager.State.CONNECTED
     fun set(change: (com.laurio.slamlog.data.UserSettings) -> com.laurio.slamlog.data.UserSettings) = vm.updateSettings(change(s))
 
     Column(
@@ -73,6 +80,49 @@ fun RowingScreen(
             else "Heart rate isn't connected. Go Back to connect your strap.",
             color = if (state == State.CONNECTED) Mint else MaterialTheme.colorScheme.error,
         )
+
+        SectionCard {
+            Label("Rower")
+            Text(
+                when (rState) {
+                    RowerManager.State.CONNECTED -> "Connected · ${rName ?: "rower"}" +
+                        (rData?.distanceM?.let { " · $it m on the monitor" } ?: "")
+                    RowerManager.State.CONNECTING -> "Connecting to ${rName ?: "the rower"}…"
+                    RowerManager.State.SCANNING -> "Searching… put the monitor on Connect App."
+                    RowerManager.State.IDLE -> if (vm.rowMachine.hasSavedRower) "Not connected" else "No rower paired yet"
+                },
+                color = if (rowerOn) Mint else MaterialTheme.colorScheme.onSurface,
+            )
+            rError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                when (rState) {
+                    RowerManager.State.CONNECTED, RowerManager.State.CONNECTING ->
+                        OutlinedButton(onClick = { vm.rowMachine.disconnect() }) { Text("Disconnect") }
+                    RowerManager.State.SCANNING ->
+                        OutlinedButton(onClick = { vm.rowMachine.stopScan() }) { Text("Stop searching") }
+                    RowerManager.State.IDLE -> {
+                        Button(onClick = { vm.rowMachine.startScan() }) { Text("Find rower") }
+                        if (vm.rowMachine.hasSavedRower) OutlinedButton(onClick = { vm.rowMachine.reconnect() }) { Text("Reconnect") }
+                    }
+                }
+            }
+            if (rState == RowerManager.State.SCANNING || (rState == RowerManager.State.IDLE && rDevices.isNotEmpty())) {
+                rDevices.forEach { d ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(d.name, Modifier.weight(1f))
+                        TextButton(onClick = { vm.rowMachine.connect(d) }) { Text("Connect") }
+                    }
+                }
+            }
+            Text(
+                if (rowerOn) "Each interval ends by itself at ${s.rowDistanceM} m, and records your real pace, " +
+                    "stroke rate and watts. Just row: the app runs the intervals and the rests."
+                else "On the rower's monitor choose Connect App, then Find rower (or Reconnect). Without it, " +
+                    "tap INTERVAL DONE at the end of each interval.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         SectionCard {
             Label("Rowing workout")
@@ -103,8 +153,7 @@ fun RowingScreen(
                     onPlus = { set { it.copy(rowRestSec = (it.rowRestSec + 15).coerceAtMost(600)) } })
             }
             Text(
-                "Set the same intervals on the rower. Tap INTERVAL DONE on the phone when each one finishes: " +
-                    "that starts the rest and the clock to ${s.rowTargetHr} bpm.",
+                "The end of each interval starts the rest and the clock to ${s.rowTargetHr} bpm.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -128,7 +177,7 @@ fun RowingScreen(
                     }
                 }
                 Text(
-                    "Pace is worked out from the distance and the time between GO and INTERVAL DONE.",
+                    "Pace per 500 m, from the meters rowed and the time from GO to the end of each interval.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

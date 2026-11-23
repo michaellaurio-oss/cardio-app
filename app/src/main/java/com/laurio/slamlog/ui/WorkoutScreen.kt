@@ -113,6 +113,18 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
         Box {
         SectionCard {
             when {
+                ui.phase == Phase.WORK && ui.rowing && ui.rowLive -> {
+                    // Read from the rower: meters left is the big number.
+                    Text("${(ui.distanceM - ui.rowMeters).coerceAtLeast(0)}", Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                        fontSize = 96.sp, fontWeight = FontWeight.Black, color = Orange)
+                    Text("meters to go · ${mmss(ui.setElapsedSec)}", Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row {
+                        Stat("pace /500", ui.paceSec?.let { mmss(it) } ?: "—", Modifier.weight(1f), color = Sky)
+                        Stat("strokes/min", ui.spm?.let { "${it.roundToInt()}" } ?: "—", Modifier.weight(1f))
+                        Stat("watts", ui.watts?.let { "$it" } ?: "—", Modifier.weight(1f))
+                    }
+                }
                 ui.phase == Phase.WORK && ui.rowing -> {
                     Text(mmss(ui.setElapsedSec), Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                         fontSize = 96.sp, fontWeight = FontWeight.Black, color = Orange)
@@ -204,7 +216,12 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
 
         // ---- Controls ----
         when (ui.phase) {
-            Phase.WORK -> if (ui.rowing) {
+            Phase.WORK -> if (ui.rowing && ui.rowLive) {
+                // The rower ends the interval; this is just a way out.
+                OutlinedButton(onClick = { vm.endSet() }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                    Text("End interval now")
+                }
+            } else if (ui.rowing) {
                 Button(onClick = { vm.endSet() }, modifier = Modifier.fillMaxWidth().height(96.dp)) {
                     Text("INTERVAL DONE", fontSize = 28.sp, fontWeight = FontWeight.Black)
                 }
@@ -247,8 +264,10 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
                     val recPart = s.recoveryBpm?.let { " · ↓$it" } ?: ""
                     val toTarget = s.timeToTargetSec?.let { " · ${s.targetHr} in ${mmss(it)}" } ?: ""
                     val main = if (ui.rowing) {
-                        val pace = if (ui.distanceM > 0 && s.durationSec > 0) " (${mmss((s.durationSec * 500.0 / ui.distanceM).roundToInt())}/500 m)" else ""
-                        "Interval ${s.number}: ${mmss(s.durationSec)}$pace"
+                        val m = if (s.meters > 0) s.meters else ui.distanceM
+                        val pace = if (m > 0 && s.durationSec > 0) " (${mmss((s.durationSec * 500.0 / m).roundToInt())}/500 m)" else ""
+                        val spm = if (s.avgSpm > 0) " · ${s.avgSpm.roundToInt()} spm" else ""
+                        "Interval ${s.number}: ${mmss(s.durationSec)}$pace$spm"
                     } else "Set ${s.number}: ${s.reps} reps in ${mmss(s.durationSec)}"
                     Text("$main$hrPart$recPart$toTarget", style = MaterialTheme.typography.bodyMedium)
                 }

@@ -67,11 +67,15 @@ the Slam Ball and Rowing screens rather than the first screen.
 
 - Set **intervals**, **distance each**, **resistance** and rest on the Rowing screen, the same as you
   set them on the rower's monitor. Rowing has its own recovery target and rest settings.
-- During an interval the phone shows the interval time; tap **INTERVAL DONE** when the rower finishes
-  it. That starts the rest, and the same clock to your recovery target as after a slam ball set
-  (rest until HR ≤ target, with a minimum rest, works the same way).
-- Each interval records its time, **pace per 500 m** (from the distance and time), average and peak
-  heart rate, 1-minute drop and time to target. The Rowing screen lists recent rowing workouts.
+- **Connect the rower** (Rowing screen → Find rower; on the Rogue Echo Rower's monitor choose
+  Connect App first). It reads the monitor over the standard Bluetooth fitness-machine service, so the
+  phone shows meters to go, pace, stroke rate and watts, and each interval **ends by itself** at its
+  distance. Just row: the app runs the intervals and the rests.
+- Without the rower connected, the phone shows the interval time; tap **INTERVAL DONE** when you finish.
+- Either way, the end of the interval starts the rest and the same clock to your recovery target as
+  after a slam ball set (rest until HR ≤ target, with a minimum rest, works the same way).
+- Each interval records its time, **pace per 500 m**, meters, strokes, stroke rate and watts (when the
+  rower is connected), average and peak heart rate, 1-minute drop and time to target. The Rowing screen lists recent rowing workouts.
 - **Rower test** (bottom of the Rowing screen): connects to the rower's monitor over Bluetooth and
   shows what it sends, with a Copy report button. It's a step toward reading distance, pace and stroke
   rate straight from the rower.

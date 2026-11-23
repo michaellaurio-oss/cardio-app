@@ -110,6 +110,13 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
                 Stat("resistance", if (session.resistance > 0) "${session.resistance}" else "—", Modifier.weight(1f))
                 Stat("calories", if (hasHr) "${session.calories.roundToInt()}" else "—", Modifier.weight(1f))
             }
+            if (session.avgSpm != null || session.avgWatts != null) {
+                Row {
+                    Stat("strokes/min", session.avgSpm?.let { "${it.roundToInt()}" } ?: "—", Modifier.weight(1f))
+                    Stat("avg watts", session.avgWatts?.let { "${it.roundToInt()}" } ?: "—", Modifier.weight(1f))
+                    Stat("strokes", "%,d".format(session.sets.sumOf { it.strokes }), Modifier.weight(1f))
+                }
+            }
             if (hasHr) {
                 Row {
                     Stat("avg HR", "${session.avgHr}", Modifier.weight(1f))
@@ -154,7 +161,7 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
             Label(if (row) "Intervals" else "Sets")
             Row {
                 Header(if (row) "#" else "Set", 0.6f)
-                if (row) Header("Pace", 1f) else Header("Reps", 0.8f)
+                if (row) { Header("Pace", 1f); if (session.avgSpm != null) Header("spm", 0.7f) } else Header("Reps", 0.8f)
                 Header("Time", 1f)
                 if (hasHr) { Header("Peak", 0.9f); Header("1-min ↓", 1f); Header(if (target > 0) "To $target" else "To target", 1.1f) }
             }
@@ -162,7 +169,10 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
             session.sets.forEach { s ->
                 Row {
                     Cell("${s.number}", 0.6f)
-                    if (row) Cell(session.pace500(s)?.let { mmss(it.roundToInt()) } ?: "—", 1f) else Cell("${s.reps}", 0.8f)
+                    if (row) {
+                        Cell(session.pace500(s)?.let { mmss(it.roundToInt()) } ?: "—", 1f)
+                        if (session.avgSpm != null) Cell(if (s.avgSpm > 0) "${s.avgSpm.roundToInt()}" else "—", 0.7f)
+                    } else Cell("${s.reps}", 0.8f)
                     Cell(mmss(s.durationSec), 1f)
                     if (hasHr) {
                         Cell(if (s.peakHr > 0) "${s.peakHr}" else "—", 0.9f)

@@ -13,6 +13,8 @@ import androidx.lifecycle.viewModelScope
 import com.laurio.slamlog.audio.SlamDetector
 import com.laurio.slamlog.audio.Speaker
 import com.laurio.slamlog.ble.HeartRateManager
+import com.laurio.slamlog.ble.RowerData
+import com.laurio.slamlog.ble.RowerManager
 import com.laurio.slamlog.ble.RowerProbe
 import com.laurio.slamlog.data.Activity
 import com.laurio.slamlog.data.Session
@@ -62,6 +64,12 @@ data class WorkoutUi(
     val rowing: Boolean = false,
     val distanceM: Int = 0,
     val resistance: Int = 0,
+    /** Rowing with the rower connected: meters this interval, and live stroke rate, pace and watts. */
+    val rowMeters: Int = 0,
+    val rowLive: Boolean = false,
+    val spm: Double? = null,
+    val paceSec: Int? = null,
+    val watts: Int? = null,
 )
 
 class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
@@ -78,6 +86,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     val hr = HeartRateManager(app, settingsStore)
     /** Rower test (Rowing screen): what the rower's monitor offers over Bluetooth. */
     val rower = RowerProbe(app)
+    /** The rowing machine itself (FTMS): ends intervals at their distance and records pace, strokes, watts. */
+    val rowMachine = RowerManager(app, settingsStore)
     private val speaker = Speaker(app).also { it.voiceEnabled = _settings.value.voice }
     private val detector = SlamDetector(
         onSlam = { main.post { onSlam() } },
@@ -125,6 +135,39 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     private var waitingForTarget = false
     /** Seconds in a row with no heart rate reading during rest (strap dropped out). */
     private var noHrSec = 0
+    // Rowing, from the rower's monitor
+    private var lastRowDist: Int? = null
+    private var lastRowStrokes: Int? = null
+    private var intervalMeters = 0
+    private var intervalStrokes = 0
+    private val spmSamples = ArrayList<Double>()
+    private val wattSamples = ArrayList<Int>()
+
+    init {
+        viewModelScope.launch { rowMachine.data.collect { d -> if (d != null) onRowerData(d) } }
+    }
+
+    /**
+     * A reading from the rower (about once a second). Meters count only during an interval and only as
+     * increases of the monitor's own counter, so a reset on the monitor (or rowing during rest) doesn't
+     * count. The interval ends by itself at its distance.
+     */
+    private fun onRowerData(d: RowerData) {
+        val prevDist = lastRowDist
+        val prevStrokes = lastRowStrokes
+        lastRowDist = d.distanceM
+        lastRowStrokes = d.strokes
+        val u = _ui.value
+        if (!rowing || u.phase != Phase.WORK) return
+        val dist = d.distanceM
+        if (dist != null && prevDist != null && dist >= prevDist && dist - prevDist <= 100) intervalMeters += dist - prevDist
+        val st = d.strokes
+        if (st != null && prevStrokes != null && st >= prevStrokes && st - prevStrokes <= 10) intervalStrokes += st - prevStrokes
+        d.strokeRate?.takeIf { it > 0 }?.let { spmSamples += it }
+        d.watts?.takeIf { it > 0 }?.let { wattSamples += it }
+        _ui.value = u.copy(rowMeters = intervalMeters, rowLive = true, spm = d.strokeRate, paceSec = d.paceSec, watts = d.watts)
+        if (cfg.distanceM > 0 && intervalMeters >= cfg.distanceM) endSet()
+    }
 
     // ---------- Settings ----------
 
@@ -214,6 +257,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Start a rowing workout with the intervals set on the Rowing screen. */
     fun startRowing() {
+        rowMachine.reconnect()
         val s = _settings.value
         startWorkout(
             WorkoutConfig(
@@ -301,7 +345,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     private fun statusText(u: WorkoutUi): String = when (u.phase) {
         Phase.GET_READY -> "Get ready · ${u.secondsLeft} s"
         Phase.WORK ->
-            if (u.rowing) "Interval ${u.setNumber} of ${u.totalSets} · ${mmss(u.setElapsedSec)}"
+            if (u.rowing) "Interval ${u.setNumber} of ${u.totalSets} · " +
+                (if (u.rowLive) "${u.rowMeters}/${u.distanceM} m" else mmss(u.setElapsedSec))
             else "Set ${u.setNumber} of ${u.totalSets} · ${u.reps}/${u.targetReps} reps"
         Phase.REST ->
             if (u.holding) "Rest · waiting for ${u.targetHr} bpm · ${mmss(u.sinceSlamSec)} since ${if (u.rowing) "the interval" else "last slam"}"
@@ -426,8 +471,16 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         val u = _ui.value
         val number = u.setNumber + 1
         setHr.clear()
+        intervalMeters = 0
+        intervalStrokes = 0
+        spmSamples.clear()
+        wattSamples.clear()
         _ui.value = u.copy(
             phase = Phase.WORK,
+            rowMeters = 0,
+            spm = null,
+            paceSec = null,
+            watts = null,
             setNumber = number,
             reps = 0,
             setElapsedSec = 0,
@@ -485,6 +538,10 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         durationSec = u.setElapsedSec,
         avgHr = if (setHr.isEmpty()) 0 else setHr.average().roundToInt(),
         peakHr = setHr.maxOrNull() ?: 0,
+        meters = if (rowing) intervalMeters else 0,
+        strokes = if (rowing) intervalStrokes else 0,
+        avgSpm = if (rowing && spmSamples.isNotEmpty()) spmSamples.average() else 0.0,
+        avgWatts = if (rowing && wattSamples.isNotEmpty()) wattSamples.average().roundToInt() else 0,
     )
 
     /** Finish the current set (target reached or "End set" tapped). */
@@ -523,7 +580,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             val restLen = if (cfg.restUntilTarget) cfg.minRestSec else cfg.restSec
             _ui.value = common.copy(phase = Phase.REST, secondsLeft = restLen, holding = false)
             speaker.say(
-                if (rowing) "Interval ${u.setNumber} done in ${spokenTime(u.setElapsedSec)}. Rest."
+                if (rowing) "Interval ${u.setNumber} done in ${spokenTime(u.setElapsedSec)}." +
+                    (if (intervalMeters > 0) " Pace ${spokenPace(u.setElapsedSec * 500.0 / intervalMeters)}." else "") + " Rest."
                 else "Set ${u.setNumber} done. ${u.reps} reps. Rest.",
             )
         }
@@ -579,6 +637,12 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun setLastSet(sets: List<SetResult>, change: (SetResult) -> SetResult): List<SetResult> =
         if (sets.isEmpty()) sets else sets.dropLast(1) + change(sets.last())
+
+    /** "1 52" for 1:52 per 500 m, the way rowers say it. */
+    private fun spokenPace(sec: Double): String {
+        val s = sec.roundToInt()
+        return if (s < 60) "$s" else "${s / 60} ${"%02d".format(s % 60).let { if (it.startsWith("0")) "oh ${it[1]}" else it }}"
+    }
 
     private fun spokenTime(sec: Int): String =
         if (sec < 60) "$sec seconds" else if (sec % 60 == 0) "${sec / 60} minutes".replace("1 minutes", "1 minute")
@@ -712,6 +776,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         hr.release()
         rower.stopScan()
         rower.disconnect()
+        rowMachine.release()
         speaker.shutdown()
     }
 

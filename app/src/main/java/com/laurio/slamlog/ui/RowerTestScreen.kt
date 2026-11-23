@@ -46,7 +46,11 @@ fun RowerTestScreen(vm: WorkoutViewModel, onBack: () -> Unit) {
     val clipboard = LocalClipboardManager.current
     var copied by remember { mutableStateOf(false) }
     // Leave the rower free for other apps once this screen closes.
-    DisposableEffect(Unit) { onDispose { probe.stopScan(); probe.disconnect() } }
+    // The monitor takes one connection at a time: free it from the workout connection while testing.
+    DisposableEffect(Unit) {
+        vm.rowMachine.disconnect()
+        onDispose { probe.stopScan(); probe.disconnect() }
+    }
     BackHandler(onBack = onBack)
 
     Column(
