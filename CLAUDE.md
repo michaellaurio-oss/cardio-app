@@ -46,6 +46,9 @@ He is the only user. Explain build and install steps plainly; he is not a day-to
   A rowing interval ends with the boxing bell (`Speaker.threeLeft`), not the long beep; the spoken time and
   pace wait `BELL_MS` so they don't talk over it. Michael asked for a bell he can hear over the rower.
   `ble/RowerProbe.kt` + `RowerTestScreen` (Rowing → Rower test) is the diagnostic that found all this.
+- Start countdown (rest and get-ready): `Speaker.countdownBeep()` at 3, 2, 1 and `goBeep()` as the set
+  starts, synthesized loud (880 Hz / 1320 Hz) so they carry over the rower; the "Set N. Go!" callout waits
+  `GO_MS`. Michael asked for audible countdown beeps.
 - Age comes from the stored birthday (`UserSettings.birthDate`), never a stored age.
 
 ## Architecture

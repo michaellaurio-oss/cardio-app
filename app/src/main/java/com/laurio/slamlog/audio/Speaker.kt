@@ -65,6 +65,59 @@ class Speaker(context: Context) : TextToSpeech.OnInitListener {
     /** Countdown beep. */
     fun beepShort() = play(ToneGenerator.TONE_DTMF_1, 150)
 
+    /**
+     * Start countdown, like a race clock: [countdownBeep] at 3, 2, 1 (short, mid pitch) and [goBeep] as
+     * the set starts (longer, higher). Synthesized at full volume so they carry over a rower's fan.
+     */
+    fun countdownBeep() = playTrack(countTrack, COUNT_MS) { beepShort() }
+
+    fun goBeep() = playTrack(goTrack, GO_MS) { beepLong() }
+
+    private fun playTrack(track: AudioTrack?, ms: Int, fallback: () -> Unit) {
+        if (track == null) return fallback()
+        markBusy(ms + 100L)
+        runCatching {
+            track.stop()
+            track.reloadStaticData()
+            track.play()
+        }
+    }
+
+    private val countTrack: AudioTrack? = toneTrack(880.0, COUNT_MS)
+    private val goTrack: AudioTrack? = toneTrack(1320.0, GO_MS)
+
+    /** A bright beep: a sine with a little 3rd and 5th harmonic, 5 ms edges so it doesn't click. */
+    private fun toneTrack(freq: Double, ms: Int): AudioTrack? = runCatching {
+        val rate = 44_100
+        val n = rate * ms / 1000
+        val edge = rate * 5 / 1000
+        val pcm = ShortArray(n) { i ->
+            val t = i.toDouble() / rate
+            val w = 2 * Math.PI * freq * t
+            val v = (Math.sin(w) + 0.25 * Math.sin(3 * w) + 0.1 * Math.sin(5 * w)) / 1.35
+            val env = minOf(1.0, i.toDouble() / edge, (n - i).toDouble() / edge)
+            (v * env * 0.95 * Short.MAX_VALUE).toInt().toShort()
+        }
+        AudioTrack.Builder()
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_GAME)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build(),
+            )
+            .setAudioFormat(
+                AudioFormat.Builder()
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setSampleRate(rate)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .build(),
+            )
+            .setTransferMode(AudioTrack.MODE_STATIC)
+            .setBufferSizeInBytes(pcm.size * 2)
+            .build()
+            .also { it.write(pcm, 0, pcm.size) }
+    }.getOrNull()
+
     /** Start / end of a set. */
     fun beepLong() = play(ToneGenerator.TONE_DTMF_9, 500)
 
@@ -201,6 +254,8 @@ class Speaker(context: Context) : TextToSpeech.OnInitListener {
         tone?.release()
         bell?.release()
         klaxonTrack?.release()
+        countTrack?.release()
+        goTrack?.release()
     }
 
     companion object {
@@ -208,5 +263,7 @@ class Speaker(context: Context) : TextToSpeech.OnInitListener {
         const val STRIKE_GAP_MS = 190
         const val BELL_MS = (STRIKES - 1) * STRIKE_GAP_MS + 420
         const val KLAXON_RATE = 44_100
+        const val COUNT_MS = 200
+        const val GO_MS = 600
     }
 }
