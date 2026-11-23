@@ -678,11 +678,12 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
      * Writes all workouts to a CSV file (one row per set) in the app's cache and returns it,
      * ready to share. Older exports are removed so the cache doesn't grow.
      */
-    fun exportCsvFile(): File {
+    /** CSV of [list] (default: every workout) in the app's cache, ready to share. */
+    fun exportCsvFile(list: List<Session> = _sessions.value): File {
         val dir = File(getApplication<Application>().cacheDir, "exports").apply { mkdirs() }
         dir.listFiles()?.forEach { it.delete() }
         val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        return File(dir, "cardio-log-workouts-$stamp.csv").apply { writeText(buildCsv(_sessions.value)) }
+        return File(dir, "cardio-log-workouts-$stamp.csv").apply { writeText(buildCsv(list)) }
     }
 
     fun setLocked(session: Session, value: Boolean): Session {

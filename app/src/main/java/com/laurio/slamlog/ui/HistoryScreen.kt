@@ -39,8 +39,10 @@ private val dayFmt = SimpleDateFormat("EEE, MMM d, yyyy · h:mm a", Locale.US)
 fun HistoryScreen(
     sessions: List<Session>,
     onOpen: (Session) -> Unit,
-    onTrends: () -> Unit,
+    /** Null hides "See trends" (rowing has no Trends screen yet). */
+    onTrends: (() -> Unit)?,
     onExport: () -> File,
+    title: String = "HISTORY",
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -52,7 +54,7 @@ fun HistoryScreen(
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("HISTORY", fontSize = 26.sp, fontWeight = FontWeight.Black,
+                Text(title, fontSize = 26.sp, fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
                 TextButton(onClick = onBack) { Text("Back") }
             }
@@ -65,18 +67,22 @@ fun HistoryScreen(
                     Label("All time")
                     Row {
                         Stat("workouts", "${sessions.size}", Modifier.weight(1f))
-                        Stat("slams", "%,d".format(sessions.sumOf { it.totalReps }), Modifier.weight(1f), color = Orange)
-                        Stat("lb moved", "%,d".format(sessions.sumOf { it.totalReps * it.ballWeightLbs }), Modifier.weight(1f))
-                        if (sessions.any { it.isRow }) Stat("m rowed", "%,d".format(sessions.sumOf { it.totalMeters }), Modifier.weight(1f), color = Sky)
+                        if (sessions.all { it.isRow }) {
+                            Stat("m rowed", "%,d".format(sessions.sumOf { it.totalMeters }), Modifier.weight(1f), color = Orange)
+                            Stat("intervals", "%,d".format(sessions.sumOf { it.sets.size }), Modifier.weight(1f))
+                        } else {
+                            Stat("slams", "%,d".format(sessions.sumOf { it.totalReps }), Modifier.weight(1f), color = Orange)
+                            Stat("lb moved", "%,d".format(sessions.sumOf { it.totalReps * it.ballWeightLbs }), Modifier.weight(1f))
+                        }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = onTrends, modifier = Modifier.weight(1f)) { Text("See trends") }
+                        if (onTrends != null) Button(onClick = onTrends, modifier = Modifier.weight(1f)) { Text("See trends") }
                         OutlinedButton(onClick = {
                             val file = onExport()
                             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                             val send = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/csv"
-                                putExtra(Intent.EXTRA_SUBJECT, "Cardio Log workouts")
+                                putExtra(Intent.EXTRA_SUBJECT, "Cardio Log ${title.lowercase()}")
                                 putExtra(Intent.EXTRA_STREAM, uri)
                                 clipData = ClipData.newRawUri(file.name, uri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

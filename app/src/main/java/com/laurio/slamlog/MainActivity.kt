@@ -127,8 +127,6 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onRequestPermissions = requestPermissions,
                 onSlamBall = { screen = Screen.HOME },
                 onRowing = { screen = Screen.ROWING },
-                onHistory = { historyBack = Screen.START; screen = Screen.HISTORY },
-                onSettings = { settingsBack = Screen.START; screen = Screen.SETTINGS },
                 onAboutYou = { aboutBack = Screen.START; screen = Screen.ABOUT_YOU },
             )
             Screen.HOME -> HomeScreen(
@@ -147,6 +145,7 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onStart = { workoutFrom = Screen.ROWING; vm.startRowing(); screen = Screen.WORKOUT },
                 onOpen = { shown = it; summaryBack = Screen.ROWING; screen = Screen.SUMMARY },
                 onHistory = { historyBack = Screen.ROWING; screen = Screen.HISTORY },
+                onAboutYou = { aboutBack = Screen.ROWING; screen = Screen.ABOUT_YOU },
                 onBack = { screen = Screen.START },
             )
             Screen.WORKOUT -> WorkoutScreen(vm)
@@ -166,13 +165,19 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                     )
                 }
             }
-            Screen.HISTORY -> HistoryScreen(
-                sessions = sessions,
-                onOpen = { shown = it; summaryBack = Screen.HISTORY; screen = Screen.SUMMARY },
-                onTrends = { trendsBack = Screen.HISTORY; screen = Screen.TRENDS },
-                onExport = { vm.exportCsvFile() },
-                onBack = { screen = historyBack },
-            )
+            Screen.HISTORY -> {
+                // Each workout has its own history: opened from Rowing, rowing only; otherwise slam ball.
+                val rowing = historyBack == Screen.ROWING
+                val list = sessions.filter { it.isRow == rowing }
+                HistoryScreen(
+                    sessions = list,
+                    onOpen = { shown = it; summaryBack = Screen.HISTORY; screen = Screen.SUMMARY },
+                    onTrends = if (rowing) null else ({ trendsBack = Screen.HISTORY; screen = Screen.TRENDS }),
+                    onExport = { vm.exportCsvFile(list) },
+                    title = if (rowing) "ROWING HISTORY" else "SLAM BALL HISTORY",
+                    onBack = { screen = historyBack },
+                )
+            }
             Screen.TRENDS -> TrendsScreen(
                 // Slam ball trends only; rowing has its own list on the Rowing screen.
                 sessions = sessions.filter { !it.isRow },

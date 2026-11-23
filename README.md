@@ -62,7 +62,8 @@ so they can't answer "is my recovery improving?" on their own. The **baseline te
 ## Rowing machine
 
 The first screen connects the heart rate strap and offers two workouts: **Slam Ball** (everything
-above, unchanged) and **Rowing Machine**.
+above, unchanged) and **Rowing Machine**. History and settings belong to each workout, so they're on
+the Slam Ball and Rowing screens rather than the first screen.
 
 - Set **intervals**, **distance each**, **resistance** and rest on the Rowing screen, the same as you
   set them on the rower's monitor. Rowing has its own recovery target and rest settings.
@@ -71,8 +72,9 @@ above, unchanged) and **Rowing Machine**.
   (rest until HR ≤ target, with a minimum rest, works the same way).
 - Each interval records its time, **pace per 500 m** (from the distance and time), average and peak
   heart rate, 1-minute drop and time to target. The Rowing screen lists recent rowing workouts.
-- Rowing workouts are in History (marked ROWING) and the CSV export, but not in the slam ball Trends
-  or baseline comparisons.
+- Rowing has its own History (and CSV export), separate from slam ball's, and isn't in the slam ball
+  Trends or baseline comparisons. About you (birthday, weight, max HR, heart rate warning) is
+  reachable from both.
 
 ## Everything else
 

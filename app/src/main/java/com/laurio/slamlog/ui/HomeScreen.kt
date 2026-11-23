@@ -46,7 +46,7 @@ fun HomeScreen(
     val state by vm.hr.state.collectAsState()
     val cfg by vm.config.collectAsState()
     val settings by vm.settings.collectAsState()
-    val sessions by vm.sessions.collectAsState()
+    val sessions = vm.sessions.collectAsState().value.filter { !it.isRow }
     val perms by vm.permissions.collectAsState()
     Column(
         Modifier

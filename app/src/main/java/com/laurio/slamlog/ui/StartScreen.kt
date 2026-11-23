@@ -2,7 +2,6 @@ package com.laurio.slamlog.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +12,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -32,12 +30,9 @@ fun StartScreen(
     onRequestPermissions: () -> Unit,
     onSlamBall: () -> Unit,
     onRowing: () -> Unit,
-    onHistory: () -> Unit,
-    onSettings: () -> Unit,
     onAboutYou: () -> Unit,
 ) {
     val settings by vm.settings.collectAsState()
-    val sessions by vm.sessions.collectAsState()
     Column(
         Modifier
             .fillMaxSize()
@@ -66,12 +61,6 @@ fun StartScreen(
         WorkoutChoice("SLAM BALL", "Sets of slams, counted by the mic", Orange, onSlamBall)
         WorkoutChoice("ROWING MACHINE", "Intervals with rest until your heart rate recovers", Sky, onRowing)
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = onHistory, modifier = Modifier.weight(1f)) {
-                Text(if (sessions.isEmpty()) "History" else "History (${sessions.size})")
-            }
-            OutlinedButton(onClick = onSettings, modifier = Modifier.weight(1f)) { Text("Settings") }
-        }
         Spacer(Modifier.height(8.dp))
     }
 }

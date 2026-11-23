@@ -33,7 +33,8 @@ He is the only user. Explain build and install steps plainly; he is not a day-to
   `distanceM`, `resistance`; `isRow`, `pace500`, `totalMeters`. Rowing settings are `UserSettings.row*`;
   `startRowing()` runs the same engine with `autoCount = false`, `targetReps = 0`, and the Workout screen's
   INTERVAL DONE button calls `endSet()` (recovery clock starts at the tap). Trends/baselines get slam
-  sessions only. Screen flow: `StartScreen` (strap + choice) → `HomeScreen` (Slam Ball) or `RowingScreen`.
+  sessions only. Screen flow: `StartScreen` (strap + choice only; no History/Settings, Michael wants those
+  per workout) → `HomeScreen` (Slam Ball) or `RowingScreen`. History is filtered by where it was opened from.
   The Rogue Echo Rower's M2 monitor has Bluetooth, but reading it isn't built yet.
 - Age comes from the stored birthday (`UserSettings.birthDate`), never a stored age.
 

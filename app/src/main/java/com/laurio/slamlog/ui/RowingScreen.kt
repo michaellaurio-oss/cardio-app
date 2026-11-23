@@ -43,6 +43,7 @@ fun RowingScreen(
     onStart: () -> Unit,
     onOpen: (Session) -> Unit,
     onHistory: () -> Unit,
+    onAboutYou: () -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -131,7 +132,13 @@ fun RowingScreen(
                 )
             }
         }
-        OutlinedButton(onClick = onHistory, modifier = Modifier.fillMaxWidth()) { Text("History") }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = onHistory, modifier = Modifier.weight(1f)) {
+                Text(if (rows.isEmpty()) "History" else "History (${rows.size})")
+            }
+            // Birthday, weight, max HR and the heart rate warning apply to rowing too.
+            OutlinedButton(onClick = onAboutYou, modifier = Modifier.weight(1f)) { Text("About you") }
+        }
         Spacer(Modifier.height(8.dp))
     }
 }
