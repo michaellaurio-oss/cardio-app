@@ -15,7 +15,7 @@ and beeps, and tracks how fast your heart rate recovers after each set or interv
 
 ## Try it
 
-Download the latest APK from [Releases](https://github.com/michaellaurio-oss/slamball-app/releases/latest)
+Download the latest APK from [Releases](https://github.com/michaellaurio-oss/cardio-app/releases/latest)
 on an Android phone (8.0 or newer) and open it to install. Android will ask you to allow installs from
 your browser, and Play Protect may warn that the app is unknown; tap **Install anyway**. Any Bluetooth
 chest strap that uses the standard heart rate service works.

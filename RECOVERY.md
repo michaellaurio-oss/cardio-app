@@ -13,10 +13,10 @@ lose it is uninstalling the app, so never uninstall it, even if an install error
 ## 1. Get the code
 
 Either:
-- On https://github.com/michaellaurio-oss/slamball-app click **Code → Download ZIP**, then unzip it
+- On https://github.com/michaellaurio-oss/cardio-app click **Code → Download ZIP**, then unzip it
   (for example to `D:\Users\<you>\Claude\cardio-app`), or
 - Install Git (git-scm.com), then in PowerShell:
-  `git clone https://github.com/michaellaurio-oss/slamball-app D:\Users\<you>\Claude\cardio-app`
+  `git clone https://github.com/michaellaurio-oss/cardio-app D:\Users\<you>\Claude\cardio-app`
 
 ## 2. Install Java 17
 
