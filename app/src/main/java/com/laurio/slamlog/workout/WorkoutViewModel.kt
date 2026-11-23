@@ -416,7 +416,12 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
             Phase.WORK -> {
                 if (bpm != null) setHr += bpm
-                _ui.value = base.copy(setElapsedSec = u.setElapsedSec + 1)
+                // Rowing: show rower readings only while the rower is actually connected, so if it drops the
+                // screen goes back to the big INTERVAL DONE button (nothing else would end the interval).
+                _ui.value = base.copy(
+                    setElapsedSec = u.setElapsedSec + 1,
+                    rowLive = rowing && rowMachine.state.value == RowerManager.State.CONNECTED,
+                )
             }
 
             Phase.REST, Phase.RECOVERY -> {
@@ -478,6 +483,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         _ui.value = u.copy(
             phase = Phase.WORK,
             rowMeters = 0,
+            rowLive = rowing && rowMachine.state.value == RowerManager.State.CONNECTED,
             spm = null,
             paceSec = null,
             watts = null,
@@ -538,7 +544,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         durationSec = u.setElapsedSec,
         avgHr = if (setHr.isEmpty()) 0 else setHr.average().roundToInt(),
         peakHr = setHr.maxOrNull() ?: 0,
-        meters = if (rowing) intervalMeters else 0,
+        // If the rower dropped partway, its count is short: leave meters at 0 so pace uses the planned distance.
+        meters = if (rowing && (rowMachine.state.value == RowerManager.State.CONNECTED || intervalMeters >= cfg.distanceM)) intervalMeters else 0,
         strokes = if (rowing) intervalStrokes else 0,
         avgSpm = if (rowing && spmSamples.isNotEmpty()) spmSamples.average() else 0.0,
         avgWatts = if (rowing && wattSamples.isNotEmpty()) wattSamples.average().roundToInt() else 0,
