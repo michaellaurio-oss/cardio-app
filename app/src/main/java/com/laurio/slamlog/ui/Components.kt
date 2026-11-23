@@ -167,7 +167,7 @@ fun ZoneBars(zoneSec: List<Int>) {
 
 /** First half vs second half of a workout: set time, time to target and average HR, with the change. */
 @Composable
-fun HalfTable(h: com.laurio.slamlog.data.HalfStats, target: Int) {
+fun HalfTable(h: com.laurio.slamlog.data.HalfStats, target: Int, unit: String = "set") {
     fun sec(v: Double?) = v?.let { val r = kotlin.math.round(it).toInt(); if (r < 60) "$r s" else mmss(r) } ?: "—"
     fun diff(a: Double?, b: Double?, unit: String): String {
         if (a == null || b == null) return ""
@@ -192,11 +192,11 @@ fun HalfTable(h: com.laurio.slamlog.data.HalfStats, target: Int) {
             Text(d, Modifier.weight(1f), color = if (d.startsWith("+")) Amber else if (d.startsWith("-")) Mint else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
-    line("Set time", h.setSec1, h.setSec2, ::sec, " s")
+    line("${unit.replaceFirstChar { it.uppercase() }} time", h.setSec1, h.setSec2, ::sec, " s")
     if (target > 0) line("To $target", h.toTarget1, h.toTarget2, ::sec, " s")
     line("Avg HR", h.avgHr1, h.avgHr2, { v -> v?.let { "${kotlin.math.round(it).toInt()}" } ?: "—" }, "")
     Text(
-        "${h.setsEach} sets in each half. Bigger changes mean more fade as the workout goes on.",
+        "${h.setsEach} ${unit}s in each half. Bigger changes mean more fade as the workout goes on.",
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }

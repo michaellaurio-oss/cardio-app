@@ -44,6 +44,8 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
     val target = session.sets.firstOrNull { it.targetHr > 0 }?.targetHr ?: 0
     val measured = session.setsWithTarget(target)
     val times = measured.mapNotNull { it.timeToTargetSec }
+    val row = session.isRow
+    val unit = if (row) "interval" else "set"
 
     Column(
         Modifier
@@ -53,10 +55,10 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Column {
-            Text("WORKOUT", fontSize = 26.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+            Text(if (row) "ROWING" else "WORKOUT", fontSize = 26.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
             Text(dateFmt.format(Date(session.startMillis)), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                (if (session.baseline) "Baseline test · " else "Training · ") + session.shape +
+                (if (row) "Rowing · " else if (session.baseline) "Baseline test · " else "Training · ") + session.shape +
                     if (!session.completed) " · ended early" else "",
                 color = if (session.baseline) Sky else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold,
@@ -74,7 +76,7 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
 
         if (hasHr && target > 0) {
             SectionCard {
-                Label("Last slam → $target bpm")
+                Label(if (row) "Interval end → $target bpm" else "Last slam → $target bpm")
                 if (times.isEmpty()) {
                     Text("Heart rate didn't get down to $target during the rests.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -84,7 +86,7 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
                         Stat("fastest", mmss(times.min()), Modifier.weight(1f), color = Mint)
                         Stat("slowest", mmss(times.max()), Modifier.weight(1f))
                     }
-                    Text("Reached $target after ${times.size} of ${measured.size} sets.",
+                    Text("Reached $target after ${times.size} of ${measured.size} ${unit}s.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -93,11 +95,30 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
         session.halves(target)?.let { h ->
             SectionCard {
                 Label("First half vs second half")
-                HalfTable(h, target)
+                HalfTable(h, target, unit)
             }
         }
 
-        SectionCard {
+        if (row) SectionCard {
+            Row {
+                Stat("meters", "%,d".format(session.totalMeters), Modifier.weight(1f), color = Orange)
+                Stat("intervals", "${session.sets.size}", Modifier.weight(1f))
+                Stat("time", mmss(session.durationSec), Modifier.weight(1f))
+            }
+            Row {
+                Stat("avg pace", session.avgPace500?.let { "${mmss(it.roundToInt())}/500" } ?: "—", Modifier.weight(1f), color = Sky)
+                Stat("resistance", if (session.resistance > 0) "${session.resistance}" else "—", Modifier.weight(1f))
+                Stat("calories", if (hasHr) "${session.calories.roundToInt()}" else "—", Modifier.weight(1f))
+            }
+            if (hasHr) {
+                Row {
+                    Stat("avg HR", "${session.avgHr}", Modifier.weight(1f))
+                    Stat("max HR", "${session.maxHr}", Modifier.weight(1f), color = zoneColor(5))
+                    val recs = session.sets.mapNotNull { it.recoveryBpm }
+                    Stat("avg recovery", if (recs.isEmpty()) "—" else "↓${recs.average().roundToInt()}", Modifier.weight(1f), color = Mint)
+                }
+            }
+        } else SectionCard {
             Row {
                 Stat("slams", "${session.totalReps}", Modifier.weight(1f), color = Orange)
                 Stat("sets", "${session.sets.size}", Modifier.weight(1f))
@@ -130,15 +151,19 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
         }
 
         SectionCard {
-            Label("Sets")
+            Label(if (row) "Intervals" else "Sets")
             Row {
-                Header("Set", 0.6f); Header("Reps", 0.8f); Header("Time", 1f)
+                Header(if (row) "#" else "Set", 0.6f)
+                if (row) Header("Pace", 1f) else Header("Reps", 0.8f)
+                Header("Time", 1f)
                 if (hasHr) { Header("Peak", 0.9f); Header("1-min ↓", 1f); Header(if (target > 0) "To $target" else "To target", 1.1f) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
             session.sets.forEach { s ->
                 Row {
-                    Cell("${s.number}", 0.6f); Cell("${s.reps}", 0.8f); Cell(mmss(s.durationSec), 1f)
+                    Cell("${s.number}", 0.6f)
+                    if (row) Cell(session.pace500(s)?.let { mmss(it.roundToInt()) } ?: "—", 1f) else Cell("${s.reps}", 0.8f)
+                    Cell(mmss(s.durationSec), 1f)
                     if (hasHr) {
                         Cell(if (s.peakHr > 0) "${s.peakHr}" else "—", 0.9f)
                         Cell(s.recoveryBpm?.let { if (s.recoverySec >= 60) "↓$it" else "↓$it/${s.recoverySec}s" } ?: "—", 1f)
@@ -148,7 +173,8 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
             }
             if (hasHr) {
                 Text(
-                    "To $target: time from the last slam of the set until heart rate fell to $target. " +
+                    (if (row) "Pace: time per 500 m. To $target: time from the end of the interval until heart rate fell to $target. "
+                    else "To $target: time from the last slam of the set until heart rate fell to $target. ") +
                         "1-min ↓: how far heart rate dropped in the first minute (or over a shorter rest). " +
                         "Faster times and bigger drops mean better conditioning.",
                     style = MaterialTheme.typography.bodySmall,
@@ -158,8 +184,10 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
         }
 
         Button(onClick = onDone, modifier = Modifier.fillMaxWidth().height(56.dp)) { Text("Done") }
-        TextButton(onClick = { onToggleBaseline(!session.baseline) }, modifier = Modifier.fillMaxWidth()) {
-            Text(if (session.baseline) "Don't count this as a baseline test" else "Count this as a baseline test")
+        if (!row) {
+            TextButton(onClick = { onToggleBaseline(!session.baseline) }, modifier = Modifier.fillMaxWidth()) {
+                Text(if (session.baseline) "Don't count this as a baseline test" else "Count this as a baseline test")
+            }
         }
         SwitchRow(
             "Lock this workout",

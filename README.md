@@ -57,6 +57,21 @@ so they can't answer "is my recovery improving?" on their own. The **baseline te
 - Any workout can be **locked** from its summary screen; a locked workout has no delete button until
   you unlock it. Finished baseline tests are locked automatically. History marks them LOCKED.
 
+## Rowing machine
+
+The first screen connects the heart rate strap and offers two workouts: **Slam Ball** (everything
+above, unchanged) and **Rowing Machine**.
+
+- Set **intervals**, **distance each**, **resistance** and rest on the Rowing screen, the same as you
+  set them on the rower's monitor. Rowing has its own recovery target and rest settings.
+- During an interval the phone shows the interval time; tap **INTERVAL DONE** when the rower finishes
+  it. That starts the rest, and the same clock to your recovery target as after a slam ball set
+  (rest until HR ≤ target, with a minimum rest, works the same way).
+- Each interval records its time, **pace per 500 m** (from the distance and time), average and peak
+  heart rate, 1-minute drop and time to target. The Rowing screen lists recent rowing workouts.
+- Rowing workouts are in History (marked ROWING) and the CSV export, but not in the slam ball Trends
+  or baseline comparisons.
+
 ## Everything else
 
 - **Rep-based sets**: choose sets, reps per set, rest and ball weight. The set ends itself at the target.

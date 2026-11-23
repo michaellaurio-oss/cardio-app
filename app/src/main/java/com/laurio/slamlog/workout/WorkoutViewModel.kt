@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.laurio.slamlog.audio.SlamDetector
 import com.laurio.slamlog.audio.Speaker
 import com.laurio.slamlog.ble.HeartRateManager
+import com.laurio.slamlog.data.Activity
 import com.laurio.slamlog.data.Session
 import com.laurio.slamlog.data.SessionStore
 import com.laurio.slamlog.data.SetResult
@@ -56,6 +57,10 @@ data class WorkoutUi(
     /** Rest-until-target mode: the rest clock is paused until HR reaches the target. */
     val holding: Boolean = false,
     val baseline: Boolean = false,
+    /** Rowing: intervals end with the "Interval done" button instead of reps. */
+    val rowing: Boolean = false,
+    val distanceM: Int = 0,
+    val resistance: Int = 0,
 )
 
 class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
@@ -204,6 +209,28 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    /** Start a rowing workout with the intervals set on the Rowing screen. */
+    fun startRowing() {
+        val s = _settings.value
+        startWorkout(
+            WorkoutConfig(
+                sets = s.rowIntervals,
+                targetReps = 0,
+                restSec = s.rowRestSec,
+                ballWeightLbs = 0,
+                autoCount = false,
+                restUntilTarget = s.rowRestUntilTarget,
+                minRestSec = s.rowMinRestSec,
+                targetHr = s.rowTargetHr,
+                activity = Activity.ROW,
+                distanceM = s.rowDistanceM,
+                resistance = s.rowResistance,
+            ),
+        )
+    }
+
+    private val rowing get() = cfg.activity == Activity.ROW
+
     private var isBaseline = false
 
     fun startWorkout(config: WorkoutConfig = _config.value, baseline: Boolean = false) {
@@ -239,8 +266,15 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             targetReps = cfg.targetReps,
             secondsLeft = GET_READY_SEC,
             baseline = baseline,
+            rowing = rowing,
+            distanceM = cfg.distanceM,
+            resistance = cfg.resistance,
         )
-        speaker.say("Get ready${if (baseline) " for your baseline test" else ""}. ${cfg.sets} sets of ${cfg.targetReps}.", interrupt = true)
+        if (rowing) {
+            speaker.say("Get ready. ${cfg.sets} intervals of ${cfg.distanceM} meters.", interrupt = true)
+        } else {
+            speaker.say("Get ready${if (baseline) " for your baseline test" else ""}. ${cfg.sets} sets of ${cfg.targetReps}.", interrupt = true)
+        }
 
         ticker = viewModelScope.launch {
             var next = SystemClock.elapsedRealtime()
@@ -263,10 +297,12 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     /** Ongoing notification text for the foreground service. */
     private fun statusText(u: WorkoutUi): String = when (u.phase) {
         Phase.GET_READY -> "Get ready · ${u.secondsLeft} s"
-        Phase.WORK -> "Set ${u.setNumber} of ${u.totalSets} · ${u.reps}/${u.targetReps} reps"
+        Phase.WORK ->
+            if (u.rowing) "Interval ${u.setNumber} of ${u.totalSets} · ${mmss(u.setElapsedSec)}"
+            else "Set ${u.setNumber} of ${u.totalSets} · ${u.reps}/${u.targetReps} reps"
         Phase.REST ->
-            if (u.holding) "Rest · waiting for ${u.targetHr} bpm · ${mmss(u.sinceSlamSec)} since last slam"
-            else "Rest · ${mmss(u.secondsLeft)} · next: set ${u.setNumber + 1} of ${u.totalSets}"
+            if (u.holding) "Rest · waiting for ${u.targetHr} bpm · ${mmss(u.sinceSlamSec)} since ${if (u.rowing) "the interval" else "last slam"}"
+            else "Rest · ${mmss(u.secondsLeft)} · next: ${if (u.rowing) "interval" else "set"} ${u.setNumber + 1} of ${u.totalSets}"
         Phase.RECOVERY -> "Recovery check · stand still"
         else -> "Workout in progress"
     }
@@ -403,7 +439,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         setStartedAt = SystemClock.elapsedRealtime()
         detector.armed = cfg.autoCount && detector.isRunning
         speaker.beepLong()
-        speaker.say(if (number == cfg.sets && cfg.sets > 1) "Last set. Go!" else "Set $number. Go!")
+        val word = if (rowing) "interval" else "set"
+        speaker.say(if (number == cfg.sets && cfg.sets > 1) "Last $word. Go!" else "${word.replaceFirstChar { it.uppercase() }} $number. Go!")
     }
 
     private fun onSlam() {
@@ -482,7 +519,10 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             // Rest until target: the minimum rest counts down, then holds if HR isn't there yet.
             val restLen = if (cfg.restUntilTarget) cfg.minRestSec else cfg.restSec
             _ui.value = common.copy(phase = Phase.REST, secondsLeft = restLen, holding = false)
-            speaker.say("Set ${u.setNumber} done. ${u.reps} reps. Rest.")
+            speaker.say(
+                if (rowing) "Interval ${u.setNumber} done in ${spokenTime(u.setElapsedSec)}. Rest."
+                else "Set ${u.setNumber} done. ${u.reps} reps. Rest.",
+            )
         }
     }
 
@@ -599,6 +639,9 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             plannedSets = cfg.sets,
             restUntilTarget = cfg.restUntilTarget,
             minRestSec = if (cfg.restUntilTarget) cfg.minRestSec else 0,
+            activity = cfg.activity,
+            distanceM = cfg.distanceM,
+            resistance = cfg.resistance,
         )
         sessionStore.save(session)
         _sessions.value = sessionStore.load()
@@ -610,7 +653,9 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         val cal = if (valid.isEmpty()) "" else " ${calories.roundToInt()} calories."
         val rec = if (avgToTarget != null) " Average time to $target, ${spokenTime(avgToTarget.roundToInt())}." else ""
         waitingForTarget = false
-        speaker.say("Done. ${session.totalReps} slams in ${session.sets.size} sets.$rec$cal How hard was it? Rate it on screen.", interrupt = true)
+        val what = if (rowing) "${session.totalMeters} meters in ${session.sets.size} intervals."
+        else "${session.totalReps} slams in ${session.sets.size} sets."
+        speaker.say("Done. $what$rec$cal How hard was it? Rate it on screen.", interrupt = true)
     }
 
     /** Called once the summary screen is showing. */

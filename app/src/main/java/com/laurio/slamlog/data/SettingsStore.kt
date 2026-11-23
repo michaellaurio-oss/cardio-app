@@ -24,6 +24,13 @@ class SettingsStore(context: Context) {
         baselineTargetHr = p.getInt("baselineTargetHr", p.getInt("recoveryTargetHr", 130)),
         hrAlarm = p.getBoolean("hrAlarm", false),
         hrAlarmBpm = p.getInt("hrAlarmBpm", 0),
+        rowIntervals = p.getInt("rowIntervals", 8),
+        rowDistanceM = p.getInt("rowDistanceM", 500),
+        rowResistance = p.getInt("rowResistance", 5),
+        rowRestUntilTarget = p.getBoolean("rowRestUntilTarget", true),
+        rowMinRestSec = p.getInt("rowMinRestSec", 60),
+        rowRestSec = p.getInt("rowRestSec", 90),
+        rowTargetHr = p.getInt("rowTargetHr", p.getInt("recoveryTargetHr", 130)),
     )
 
     fun saveSettings(s: UserSettings) {
@@ -46,6 +53,13 @@ class SettingsStore(context: Context) {
             .putInt("baselineTargetHr", s.baselineTargetHr)
             .putBoolean("hrAlarm", s.hrAlarm)
             .putInt("hrAlarmBpm", s.hrAlarmBpm)
+            .putInt("rowIntervals", s.rowIntervals)
+            .putInt("rowDistanceM", s.rowDistanceM)
+            .putInt("rowResistance", s.rowResistance)
+            .putBoolean("rowRestUntilTarget", s.rowRestUntilTarget)
+            .putInt("rowMinRestSec", s.rowMinRestSec)
+            .putInt("rowRestSec", s.rowRestSec)
+            .putInt("rowTargetHr", s.rowTargetHr)
             .apply()
     }
 

@@ -67,6 +67,7 @@ fun HistoryScreen(
                         Stat("workouts", "${sessions.size}", Modifier.weight(1f))
                         Stat("slams", "%,d".format(sessions.sumOf { it.totalReps }), Modifier.weight(1f), color = Orange)
                         Stat("lb moved", "%,d".format(sessions.sumOf { it.totalReps * it.ballWeightLbs }), Modifier.weight(1f))
+                        if (sessions.any { it.isRow }) Stat("m rowed", "%,d".format(sessions.sumOf { it.totalMeters }), Modifier.weight(1f), color = Sky)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = onTrends, modifier = Modifier.weight(1f)) { Text("See trends") }
@@ -97,12 +98,20 @@ fun HistoryScreen(
                 Text(dayFmt.format(Date(s.startMillis)), fontWeight = FontWeight.SemiBold)
                 Row {
                     Column(Modifier.weight(1f)) {
-                        val tags = listOfNotNull(if (s.baseline) "BASELINE TEST" else null, if (s.isLocked) "LOCKED" else null)
+                        val tags = listOfNotNull(
+                            if (s.isRow) "ROWING" else if (s.baseline) "BASELINE TEST" else "SLAM BALL",
+                            if (s.isLocked) "LOCKED" else null,
+                        )
                         if (tags.isNotEmpty()) {
                             Text(tags.joinToString(" · "), color = Sky, fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.labelMedium)
                         }
-                        Text("${s.totalReps} slams · ${s.sets.size} × ${s.targetReps} · ${s.ballWeightLbs} lb")
+                        if (s.isRow) {
+                            val pace = s.avgPace500?.let { " · ${mmss(it.roundToInt())}/500 m" } ?: ""
+                            Text("%,d m · ${s.shape}$pace".format(s.totalMeters))
+                        } else {
+                            Text("${s.totalReps} slams · ${s.sets.size} × ${s.targetReps} · ${s.ballWeightLbs} lb")
+                        }
                         val hr = if (s.avgHr > 0) " · avg ${s.avgHr} bpm · ${s.calories.roundToInt()} cal" else ""
                         Text("${mmss(s.durationSec)}$hr", style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)

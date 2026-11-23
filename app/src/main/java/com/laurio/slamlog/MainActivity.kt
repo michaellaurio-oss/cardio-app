@@ -31,6 +31,8 @@ import com.laurio.slamlog.ui.BaselineScreen
 import com.laurio.slamlog.ui.BaselineSettingsScreen
 import com.laurio.slamlog.ui.HistoryScreen
 import com.laurio.slamlog.ui.HomeScreen
+import com.laurio.slamlog.ui.RowingScreen
+import com.laurio.slamlog.ui.StartScreen
 import com.laurio.slamlog.ui.SettingsScreen
 import com.laurio.slamlog.ui.SlamTheme
 import com.laurio.slamlog.ui.SummaryScreen
@@ -54,7 +56,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { HOME, WORKOUT, SUMMARY, HISTORY, TRENDS, SETTINGS, ABOUT_YOU, BASELINE, BASELINE_SETTINGS }
+/** START is the first screen (strap + workout choice); HOME is the Slam Ball screen. */
+private enum class Screen { START, HOME, ROWING, WORKOUT, SUMMARY, HISTORY, TRENDS, SETTINGS, ABOUT_YOU, BASELINE, BASELINE_SETTINGS }
 
 private fun neededPermissions(): Array<String> = buildList {
     if (Build.VERSION.SDK_INT >= 31) {
@@ -70,7 +73,12 @@ private fun neededPermissions(): Array<String> = buildList {
 
 @Composable
 private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
-    var screen by rememberSaveable { mutableStateOf(Screen.HOME) }
+    var screen by rememberSaveable { mutableStateOf(Screen.START) }
+    // Where History, Settings and a workout summary go Back to, and the screen a workout was started from.
+    var historyBack by rememberSaveable { mutableStateOf(Screen.START) }
+    var settingsBack by rememberSaveable { mutableStateOf(Screen.START) }
+    var summaryBack by rememberSaveable { mutableStateOf(Screen.HOME) }
+    var workoutFrom by rememberSaveable { mutableStateOf(Screen.HOME) }
     // Where Trends' Back goes (Home, or Baseline when opened from there).
     var trendsBack by rememberSaveable { mutableStateOf(Screen.HOME) }
     // Where About you's Back goes (Settings, or Home when opened from the birthday reminder).
@@ -103,31 +111,49 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
         when (ui.phase) {
             Phase.DONE -> {
                 shown = vm.lastSession
-                screen = if (shown != null) Screen.SUMMARY else Screen.HOME
+                summaryBack = workoutFrom
+                screen = if (shown != null) Screen.SUMMARY else workoutFrom
                 vm.acknowledgeDone()
             }
-            Phase.IDLE -> if (screen == Screen.WORKOUT) screen = Screen.HOME
+            Phase.IDLE -> if (screen == Screen.WORKOUT) screen = workoutFrom
             else -> if (screen != Screen.WORKOUT) screen = Screen.WORKOUT
         }
     }
 
     androidx.compose.foundation.layout.Box(modifier) {
         when (screen) {
+            Screen.START -> StartScreen(
+                vm = vm,
+                onRequestPermissions = requestPermissions,
+                onSlamBall = { screen = Screen.HOME },
+                onRowing = { screen = Screen.ROWING },
+                onHistory = { historyBack = Screen.START; screen = Screen.HISTORY },
+                onSettings = { settingsBack = Screen.START; screen = Screen.SETTINGS },
+                onAboutYou = { aboutBack = Screen.START; screen = Screen.ABOUT_YOU },
+            )
             Screen.HOME -> HomeScreen(
                 vm = vm,
                 onRequestPermissions = requestPermissions,
-                onStart = { vm.startWorkout(); screen = Screen.WORKOUT },
+                onStart = { workoutFrom = Screen.HOME; vm.startWorkout(); screen = Screen.WORKOUT },
                 onBaseline = { screen = Screen.BASELINE },
-                onHistory = { screen = Screen.HISTORY },
+                onHistory = { historyBack = Screen.HOME; screen = Screen.HISTORY },
                 onTrends = { trendsBack = Screen.HOME; screen = Screen.TRENDS },
-                onSettings = { screen = Screen.SETTINGS },
+                onSettings = { settingsBack = Screen.HOME; screen = Screen.SETTINGS },
                 onAboutYou = { aboutBack = Screen.HOME; screen = Screen.ABOUT_YOU },
+                onBack = { screen = Screen.START },
+            )
+            Screen.ROWING -> RowingScreen(
+                vm = vm,
+                onStart = { workoutFrom = Screen.ROWING; vm.startRowing(); screen = Screen.WORKOUT },
+                onOpen = { shown = it; summaryBack = Screen.ROWING; screen = Screen.SUMMARY },
+                onHistory = { historyBack = Screen.ROWING; screen = Screen.HISTORY },
+                onBack = { screen = Screen.START },
             )
             Screen.WORKOUT -> WorkoutScreen(vm)
             Screen.SUMMARY -> {
                 val s = shown
                 if (s == null) {
-                    LaunchedEffect(Unit) { screen = Screen.HOME }
+                    LaunchedEffect(Unit) { screen = Screen.START }
                 } else {
                     SummaryScreen(
                         session = s,
@@ -136,34 +162,35 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                         onToggleBaseline = { v -> shown = vm.setBaseline(s, v) },
                         onToggleLock = { v -> shown = vm.setLocked(s, v) },
                         onDelete = { if (vm.deleteSession(s.id)) { shown = null; screen = Screen.HISTORY } },
-                        onDone = { shown = null; screen = if (sessions.any { it.id == s.id } && s !== vm.lastSession) Screen.HISTORY else Screen.HOME },
+                        onDone = { shown = null; screen = summaryBack },
                     )
                 }
             }
             Screen.HISTORY -> HistoryScreen(
                 sessions = sessions,
-                onOpen = { shown = it; screen = Screen.SUMMARY },
-                onTrends = { trendsBack = Screen.HOME; screen = Screen.TRENDS },
+                onOpen = { shown = it; summaryBack = Screen.HISTORY; screen = Screen.SUMMARY },
+                onTrends = { trendsBack = Screen.HISTORY; screen = Screen.TRENDS },
                 onExport = { vm.exportCsvFile() },
-                onBack = { screen = Screen.HOME },
+                onBack = { screen = historyBack },
             )
             Screen.TRENDS -> TrendsScreen(
-                sessions = sessions,
+                // Slam ball trends only; rowing has its own list on the Rowing screen.
+                sessions = sessions.filter { !it.isRow },
                 settings = settings,
                 target = settings.recoveryTargetHr,
-                onOpen = { shown = it; screen = Screen.SUMMARY },
+                onOpen = { shown = it; summaryBack = Screen.TRENDS; screen = Screen.SUMMARY },
                 onBack = { screen = trendsBack },
             )
             Screen.SETTINGS -> SettingsScreen(
                 vm,
                 onRequestPermissions = requestPermissions,
                 onAboutYou = { aboutBack = Screen.SETTINGS; screen = Screen.ABOUT_YOU },
-                onBack = { screen = Screen.HOME },
+                onBack = { screen = settingsBack },
             )
             Screen.ABOUT_YOU -> AboutYouScreen(vm, onBack = { screen = aboutBack })
             Screen.BASELINE -> BaselineScreen(
                 vm,
-                onStartBaseline = { vm.startBaseline(); screen = Screen.WORKOUT },
+                onStartBaseline = { workoutFrom = Screen.HOME; vm.startBaseline(); screen = Screen.WORKOUT },
                 onTrends = { trendsBack = Screen.BASELINE; screen = Screen.TRENDS },
                 onBaselineSettings = { screen = Screen.BASELINE_SETTINGS },
                 onBack = { screen = Screen.HOME },

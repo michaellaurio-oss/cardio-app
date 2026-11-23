@@ -1,5 +1,6 @@
 package com.laurio.slamlog.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,17 +40,14 @@ fun HomeScreen(
     onTrends: () -> Unit,
     onSettings: () -> Unit,
     onAboutYou: () -> Unit,
+    onBack: () -> Unit,
 ) {
+    BackHandler(onBack = onBack)
     val state by vm.hr.state.collectAsState()
-    val bpm by vm.hr.heartRate.collectAsState()
-    val devices by vm.hr.devices.collectAsState()
-    val name by vm.hr.deviceName.collectAsState()
-    val error by vm.hr.error.collectAsState()
     val cfg by vm.config.collectAsState()
     val settings by vm.settings.collectAsState()
     val sessions by vm.sessions.collectAsState()
     val perms by vm.permissions.collectAsState()
-    val bluetoothOn by vm.hr.bluetoothOn.collectAsState()
     Column(
         Modifier
             .fillMaxSize()
@@ -57,7 +55,11 @@ fun HomeScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("SLAM LOG", fontSize = 28.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("SLAM BALL", fontSize = 28.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f))
+            TextButton(onClick = onBack) { Text("Back") }
+        }
 
         if (!settings.hasBirthday) {
             SectionCard {
@@ -72,61 +74,7 @@ fun HomeScreen(
             }
         }
 
-        // ---- Heart rate strap ----
-        SectionCard {
-            Label("Heart rate")
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val status = when (state) {
-                    State.CONNECTED -> "Connected · ${name ?: "strap"}"
-                    State.CONNECTING -> "Connecting to ${name ?: "strap"}…"
-                    State.WAITING -> "Waiting for ${name ?: "your strap"}. Put it on to connect."
-                    State.SCANNING -> "Searching… wet the pads and put the strap on."
-                    State.IDLE -> if (vm.hr.hasSavedStrap) "Not connected" else "No strap paired yet"
-                }
-                Text(status, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                val current = bpm
-                if (state == State.CONNECTED && current != null) {
-                    val zone = Physiology.zone(current, settings.maxHr)
-                    Text("$current", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = zoneColor(zone))
-                    Text(" bpm", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            if (!perms.bluetooth) {
-                Text("Slam Log needs the Nearby devices permission to reach your strap.", color = MaterialTheme.colorScheme.error)
-                Button(onClick = onRequestPermissions) { Text("Allow permissions") }
-            } else if (!bluetoothOn) {
-                Text("Bluetooth is off. Turn it on in your phone's quick settings.", color = MaterialTheme.colorScheme.error)
-            }
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                when (state) {
-                    State.CONNECTED, State.CONNECTING, State.WAITING ->
-                        OutlinedButton(onClick = { vm.hr.disconnect() }) { Text("Disconnect") }
-                    State.SCANNING ->
-                        OutlinedButton(onClick = { vm.hr.stopScan() }) { Text("Stop searching") }
-                    State.IDLE -> {
-                        Button(onClick = { vm.hr.startScan() }) { Text("Find strap") }
-                        if (vm.hr.hasSavedStrap) {
-                            OutlinedButton(onClick = { vm.hr.autoConnect() }) { Text("Reconnect") }
-                        }
-                    }
-                }
-            }
-
-            if (state == State.SCANNING || (state == State.IDLE && devices.isNotEmpty())) {
-                devices.forEach { d ->
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(d.name, Modifier.weight(1f))
-                        TextButton(onClick = { vm.hr.connect(d) }) { Text("Connect") }
-                    }
-                }
-                if (state == State.SCANNING && devices.isEmpty()) {
-                    Text("Nothing yet. The H808S wakes up when it touches skin.", style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
+        HeartRateCard(vm, onRequestPermissions)
 
         // ---- Training workout setup ----
         SectionCard {
@@ -141,7 +89,7 @@ fun HomeScreen(
                 onMinus = { vm.updateSettings(settings.copy(recoveryTargetHr = (settings.recoveryTargetHr - 5).coerceAtLeast(80))) },
                 onPlus = { vm.updateSettings(settings.copy(recoveryTargetHr = (settings.recoveryTargetHr + 5).coerceAtMost(200))) })
             Text(
-                "After every set, Slam Log times how long your heart rate takes to fall to this number. " +
+                "After every set, the app times how long your heart rate takes to fall to this number. " +
                     "Training workouts are only compared at the same target. The baseline test has its own.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

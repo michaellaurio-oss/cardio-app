@@ -5,6 +5,15 @@ import java.time.LocalDate
 import java.time.Period
 import org.json.JSONObject
 
+/** Which kind of workout a session is. Stored by [key] in saved workouts. */
+enum class Activity(val key: String) {
+    SLAM("slam"), ROW("row");
+
+    companion object {
+        fun of(key: String?) = entries.firstOrNull { it.key == key } ?: SLAM
+    }
+}
+
 /** What the next workout looks like. */
 data class WorkoutConfig(
     val sets: Int = 5,
@@ -21,6 +30,11 @@ data class WorkoutConfig(
     val minRestSec: Int = 60,
     /** Recovery target for this workout; 0 = use the training target in settings. Not saved. */
     val targetHr: Int = 0,
+    /** Slam ball or rowing. Not saved (rowing's settings live in [UserSettings]). */
+    val activity: Activity = Activity.SLAM,
+    /** Rowing: meters per interval, and the resistance set on the rower. Not saved here. */
+    val distanceM: Int = 0,
+    val resistance: Int = 0,
 )
 
 /** Personal details (for zones and calories) and app preferences. */
@@ -55,6 +69,15 @@ data class UserSettings(
     val hrAlarm: Boolean = false,
     /** Alarm threshold; 0 = not chosen yet, use max heart rate. */
     val hrAlarmBpm: Int = 0,
+    // ---- Rowing machine workout (set the same intervals on the rower's monitor) ----
+    val rowIntervals: Int = 8,
+    val rowDistanceM: Int = 500,
+    val rowResistance: Int = 5,
+    val rowRestUntilTarget: Boolean = true,
+    val rowMinRestSec: Int = 60,
+    val rowRestSec: Int = 90,
+    /** Rowing's own recovery target (first load: the slam ball training target). */
+    val rowTargetHr: Int = 130,
 ) {
     val birthday: LocalDate?
         get() = birthDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
@@ -152,8 +175,30 @@ data class Session(
     val minRestSec: Int = 0,
     /** Locked workouts can't be deleted. null = not set: finished baseline tests are locked by default. */
     val locked: Boolean? = null,
+    /** Slam ball (older saved workouts) or rowing. */
+    val activity: Activity = Activity.SLAM,
+    /** Rowing: meters per interval and the rower's resistance setting; 0 for slam ball. */
+    val distanceM: Int = 0,
+    val resistance: Int = 0,
 ) {
     val totalReps: Int get() = sets.sumOf { it.reps }
+
+    val isRow: Boolean get() = activity == Activity.ROW
+
+    /** Rowing: meters rowed (finished intervals × distance). */
+    val totalMeters: Int get() = if (isRow) sets.size * distanceM else 0
+
+    /** Rowing: an interval's pace, in seconds per 500 m; null without a distance or time. */
+    fun pace500(set: SetResult): Double? =
+        if (isRow && distanceM > 0 && set.durationSec > 0) set.durationSec * 500.0 / distanceM else null
+
+    /** Rowing: average pace per 500 m over the intervals. */
+    val avgPace500: Double?
+        get() = sets.mapNotNull { pace500(it) }.takeIf { it.isNotEmpty() }?.average()
+
+    /** A finished set (all reps done) or, for rowing, any timed interval. */
+    private fun finishedSet(it: SetResult) =
+        it.durationSec > 0 && (isRow || (it.reps > 0 && (targetReps == 0 || it.reps >= targetReps)))
 
     /** Whether the workout is protected from deletion (explicit choice, else finished baselines). */
     val isLocked: Boolean get() = locked ?: (baseline && completed)
@@ -168,12 +213,16 @@ data class Session(
     /** Every planned set was done (or the plan is unknown). */
     val completed: Boolean get() = plannedSets == 0 || sets.size >= plannedSets
 
-    /** Short description like "10 × 20 · 20 lb". */
-    val shape: String get() = "${if (plannedSets > 0) plannedSets else sets.size} × $targetReps · $ballWeightLbs lb"
+    /** Short description like "10 × 20 · 20 lb", or for rowing "8 × 500 m · resistance 5". */
+    val shape: String get() {
+        val n = if (plannedSets > 0) plannedSets else sets.size
+        return if (isRow) "$n × $distanceM m" + (if (resistance > 0) " · resistance $resistance" else "")
+        else "$n × $targetReps · $ballWeightLbs lb"
+    }
 
     /** Finished sets (all reps done) with a duration: the ones that show how long a set takes. */
     val timedSets: List<SetResult>
-        get() = sets.filter { it.durationSec > 0 && it.reps > 0 && (targetReps == 0 || it.reps >= targetReps) }
+        get() = sets.filter { finishedSet(it) }
 
     /** Average seconds to finish a set (finished sets only); null if none. */
     val avgSetSec: Double?
@@ -188,7 +237,7 @@ data class Session(
         if (n == 0) return null
         val first = sets.take(n)
         val second = sets.takeLast(n)
-        fun setSec(l: List<SetResult>) = l.filter { it.durationSec > 0 && it.reps > 0 && (targetReps == 0 || it.reps >= targetReps) }
+        fun setSec(l: List<SetResult>) = l.filter { finishedSet(it) }
             .map { it.durationSec }.takeIf { it.isNotEmpty() }?.average()
         fun toTarget(l: List<SetResult>) = l.filter { it.targetHr == target && target > 0 }
             .mapNotNull { it.timeToTargetSec }.takeIf { it.isNotEmpty() }?.average()
@@ -217,6 +266,9 @@ data class Session(
         .put("restUntilTarget", restUntilTarget)
         .put("minRestSec", minRestSec)
         .put("locked", locked ?: JSONObject.NULL)
+        .put("activity", activity.key)
+        .put("distanceM", distanceM)
+        .put("resistance", resistance)
 
     companion object {
         fun fromJson(o: JSONObject): Session {
@@ -241,6 +293,9 @@ data class Session(
                 restUntilTarget = o.optBoolean("restUntilTarget", false),
                 minRestSec = o.optInt("minRestSec", 0),
                 locked = if (o.has("locked") && !o.isNull("locked")) o.optBoolean("locked") else null,
+                activity = Activity.of(o.optString("activity", "slam")),
+                distanceM = o.optInt("distanceM", 0),
+                resistance = o.optInt("resistance", 0),
             )
         }
     }

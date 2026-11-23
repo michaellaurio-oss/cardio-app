@@ -82,7 +82,7 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
 
     val (phaseText, phaseColor) = when (ui.phase) {
         Phase.GET_READY -> "GET READY" to Amber
-        Phase.WORK -> "SLAM" to Orange
+        Phase.WORK -> (if (ui.rowing) "ROW" else "SLAM") to Orange
         Phase.REST -> "REST" to Mint
         Phase.RECOVERY -> "RECOVERY CHECK" to Sky
         else -> "" to MaterialTheme.colorScheme.onSurface
@@ -102,7 +102,9 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
         }
         Text(
             (if (ui.baseline) "Baseline test · " else "") +
-                (if (ui.setNumber == 0) "Set 1 of ${ui.totalSets} up next" else "Set ${ui.setNumber} of ${ui.totalSets}"),
+                (if (ui.rowing) "Interval" else "Set").let { w ->
+                    if (ui.setNumber == 0) "$w 1 of ${ui.totalSets} up next" else "$w ${ui.setNumber} of ${ui.totalSets}"
+                } + (if (ui.rowing) " · ${ui.distanceM} m" + (if (ui.resistance > 0) " · resistance ${ui.resistance}" else "") else ""),
             style = MaterialTheme.typography.titleMedium,
             color = if (ui.baseline) Sky else MaterialTheme.colorScheme.onSurface,
         )
@@ -110,8 +112,14 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
         // ---- Big number, with the slam burst drawn over it ----
         Box {
         SectionCard {
-            when (ui.phase) {
-                Phase.WORK -> {
+            when {
+                ui.phase == Phase.WORK && ui.rowing -> {
+                    Text(mmss(ui.setElapsedSec), Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                        fontSize = 96.sp, fontWeight = FontWeight.Black, color = Orange)
+                    Text("interval time · ${ui.distanceM} m", Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                ui.phase == Phase.WORK -> {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
                         Text("${ui.reps}", fontSize = 120.sp, fontWeight = FontWeight.Black, color = Orange,
                             modifier = Modifier.graphicsLayer { scaleX = pop; scaleY = pop })
@@ -122,6 +130,7 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 else -> {
+                    val since = if (ui.rowing) "since the interval ended" else "since last slam"
                     val resting = ui.phase == Phase.REST || ui.phase == Phase.RECOVERY
                     val waitingOnHr = resting && ui.timeToTarget == null && ui.targetHr > 0 &&
                         (ui.holding || (ui.phase == Phase.RECOVERY && ui.secondsLeft <= 0))
@@ -129,7 +138,7 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
                         // Count up from the last slam until HR reaches the target.
                         Text(mmss(ui.sinceSlamSec), Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                             fontSize = 96.sp, fontWeight = FontWeight.Black, color = Sky)
-                        Text("since last slam · waiting for ${ui.targetHr} bpm",
+                        Text("$since · waiting for ${ui.targetHr} bpm",
                             Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
                         Text(mmss(ui.secondsLeft), Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
@@ -142,13 +151,13 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
                                 Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                                 fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Mint)
                         } else if (!waitingOnHr && bpm != null) {
-                            Text("${mmss(ui.sinceSlamSec)} since last slam · to ${ui.targetHr}…",
+                            Text("${mmss(ui.sinceSlamSec)} $since · to ${ui.targetHr}…",
                                 Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = Sky)
                         }
                     }
                     val rec = ui.recoveryNow
                     if (resting && rec != null) {
-                        Text("Heart rate down $rec bpm since the set ended",
+                        Text("Heart rate down $rec bpm since the ${if (ui.rowing) "interval" else "set"} ended",
                             Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -195,7 +204,11 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
 
         // ---- Controls ----
         when (ui.phase) {
-            Phase.WORK -> {
+            Phase.WORK -> if (ui.rowing) {
+                Button(onClick = { vm.endSet() }, modifier = Modifier.fillMaxWidth().height(96.dp)) {
+                    Text("INTERVAL DONE", fontSize = 28.sp, fontWeight = FontWeight.Black)
+                }
+            } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FilledTonalButton(onClick = { vm.addRep(-1) }, modifier = Modifier.weight(1f).height(72.dp)) {
                         Text("−1", fontSize = 26.sp)
@@ -212,7 +225,9 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
                 if (!ui.holding) {
                     OutlinedButton(onClick = { vm.addRestTime(15) }, modifier = Modifier.weight(1f).height(56.dp)) { Text("+15 s") }
                 }
-                Button(onClick = { vm.skipRest() }, modifier = Modifier.weight(1f).height(56.dp)) { Text("Start next set") }
+                Button(onClick = { vm.skipRest() }, modifier = Modifier.weight(1f).height(56.dp)) {
+                    Text(if (ui.rowing) "Start next interval" else "Start next set")
+                }
             }
             Phase.GET_READY -> Button(onClick = { vm.skipRest() }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
                 Text("Start now")
@@ -226,13 +241,16 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
         // ---- Finished sets ----
         if (ui.completedSets.isNotEmpty()) {
             SectionCard {
-                Label("Sets done")
+                Label(if (ui.rowing) "Intervals done" else "Sets done")
                 ui.completedSets.forEach { s ->
                     val hrPart = if (s.avgHr > 0) " · avg ${s.avgHr} · peak ${s.peakHr}" else ""
                     val recPart = s.recoveryBpm?.let { " · ↓$it" } ?: ""
                     val toTarget = s.timeToTargetSec?.let { " · ${s.targetHr} in ${mmss(it)}" } ?: ""
-                    Text("Set ${s.number}: ${s.reps} reps in ${mmss(s.durationSec)}$hrPart$recPart$toTarget",
-                        style = MaterialTheme.typography.bodyMedium)
+                    val main = if (ui.rowing) {
+                        val pace = if (ui.distanceM > 0 && s.durationSec > 0) " (${mmss((s.durationSec * 500.0 / ui.distanceM).roundToInt())}/500 m)" else ""
+                        "Interval ${s.number}: ${mmss(s.durationSec)}$pace"
+                    } else "Set ${s.number}: ${s.reps} reps in ${mmss(s.durationSec)}"
+                    Text("$main$hrPart$recPart$toTarget", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }

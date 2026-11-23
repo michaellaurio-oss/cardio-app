@@ -27,6 +27,12 @@ He is the only user. Explain build and install steps plainly; he is not a day-to
 - Optional HR alarm: `UserSettings.hrAlarm` / `hrAlarmBpm` (0 = use max HR; `alarmBpm`). `checkHrAlarm` in
   `tick()` plays `Speaker.klaxon()` (the bundled "ah-OO-gah" horn, `res/raw/klaxon.wav`, ~1.9 s, CC BY 4.0: keep the README credit) on reaching it, repeats every 15 s while above,
   re-arms 5 bpm below. Set on `AboutYouScreen`, with a test button.
+- Two activities (`data.Activity`): SLAM (all of the above) and ROW. `Session.activity` (old workouts: slam),
+  `distanceM`, `resistance`; `isRow`, `pace500`, `totalMeters`. Rowing settings are `UserSettings.row*`;
+  `startRowing()` runs the same engine with `autoCount = false`, `targetReps = 0`, and the Workout screen's
+  INTERVAL DONE button calls `endSet()` (recovery clock starts at the tap). Trends/baselines get slam
+  sessions only. Screen flow: `StartScreen` (strap + choice) → `HomeScreen` (Slam Ball) or `RowingScreen`.
+  The Rogue Echo Rower's M2 monitor has Bluetooth, but reading it isn't built yet.
 - Age comes from the stored birthday (`UserSettings.birthDate`), never a stored age.
 
 ## Architecture

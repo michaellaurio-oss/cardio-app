@@ -137,7 +137,8 @@ fun buildCsv(sessions: List<Session>): String {
     val stamp = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
     val sb = StringBuilder()
     sb.append("date,baseline,planned_sets,reps_per_set,ball_lb,rest_until_target,felt_1_to_10,")
-    sb.append("set,reps,set_seconds,avg_hr,peak_hr,hr_drop_1min,target_hr,seconds_last_slam_to_target\n")
+    sb.append("set,reps,set_seconds,avg_hr,peak_hr,hr_drop_1min,target_hr,seconds_last_slam_to_target,")
+    sb.append("activity,row_meters,row_resistance,row_pace_sec_per_500m\n")
     sessions.sortedBy { it.startMillis }.forEach { s ->
         s.sets.forEach { set ->
             sb.append(stamp.format(Date(s.startMillis))).append(',')
@@ -154,7 +155,11 @@ fun buildCsv(sessions: List<Session>): String {
             sb.append(if (set.peakHr > 0) set.peakHr else "").append(',')
             sb.append(set.recoveryBpm ?: "").append(',')
             sb.append(if (set.targetHr > 0) set.targetHr else "").append(',')
-            sb.append(set.timeToTargetSec ?: "").append('\n')
+            sb.append(set.timeToTargetSec ?: "").append(',')
+            sb.append(s.activity.key).append(',')
+            sb.append(if (s.isRow) s.distanceM else "").append(',')
+            sb.append(if (s.isRow && s.resistance > 0) s.resistance else "").append(',')
+            sb.append(s.pace500(set)?.let { "%.1f".format(Locale.US, it) } ?: "").append('\n')
         }
     }
     return sb.toString()
