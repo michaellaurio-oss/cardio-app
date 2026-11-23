@@ -130,6 +130,9 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
                         fontSize = 96.sp, fontWeight = FontWeight.Black, color = Orange)
                     Text("interval time · ${ui.distanceM} m", Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Rower not connected, so tap INTERVAL DONE at ${ui.distanceM} m. To have it end by itself, " +
+                        "connect the rower on the Rowing screen first.", Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodySmall, color = Amber)
                 }
                 ui.phase == Phase.WORK -> {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {

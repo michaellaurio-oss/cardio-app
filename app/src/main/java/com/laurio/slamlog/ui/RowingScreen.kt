@@ -18,6 +18,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -60,6 +61,8 @@ fun RowingScreen(
     val rError by vm.rowMachine.error.collectAsState()
     val rData by vm.rowMachine.data.collectAsState()
     val rowerOn = rState == RowerManager.State.CONNECTED
+    // Reconnect to the saved rower whenever this screen opens (the monitor must be on Connect App).
+    LaunchedEffect(Unit) { vm.rowMachine.reconnect() }
     fun set(change: (com.laurio.slamlog.data.UserSettings) -> com.laurio.slamlog.data.UserSettings) = vm.updateSettings(change(s))
 
     Column(
