@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A ball hitting the floor with impact lines -->
+<!-- Cardio Log: a heart with a heartbeat line through it -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -7,16 +7,12 @@
     android:viewportHeight="108">
     <path
         android:fillColor="#FFFF6B2C"
-        android:pathData="M54,30a16,16 0,1 1,0 32a16,16 0,1 1,0 -32z" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF0F1115"
-        android:strokeWidth="2.5"
-        android:pathData="M40,46h28M54,30v32" />
+        android:pathData="M54,77C54,77 29,62 29,46C29,38 35,32 42.5,32C48,32 52,35.5 54,40C56,35.5 60,32 65.5,32C73,32 79,38 79,46C79,62 54,77 54,77Z" />
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFECEDEF"
         android:strokeWidth="3.5"
         android:strokeLineCap="round"
-        android:pathData="M32,70h44M30,62l-6,-4M78,62l6,-4M26,70h-4M86,70h-4" />
+        android:strokeLineJoin="round"
+        android:pathData="M26,55H39L43.5,47L48.5,64L54,40L59.5,61L63.5,55H82" />
 </vector>
