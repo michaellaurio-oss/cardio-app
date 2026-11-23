@@ -12,8 +12,8 @@ android {
         applicationId = "com.laurio.slamlog"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
     }
 
     // Sign debug builds with the key kept in this repo (app/debug.keystore), not the per-PC key in
