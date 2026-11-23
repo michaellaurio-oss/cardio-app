@@ -201,7 +201,8 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
         }
 
         // ---- Mic ----
-        if (cfg.autoCount) {
+        // cfg is the saved slam ball setup; rowing never listens, so never show the mic there.
+        if (cfg.autoCount && !ui.rowing) {
             val err = micError
             if (err != null) {
                 Text(err, color = MaterialTheme.colorScheme.error)
