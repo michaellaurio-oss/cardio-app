@@ -79,6 +79,11 @@ the Slam Ball and Rowing screens rather than the first screen.
 - **Rower test** (bottom of the Rowing screen): connects to the rower's monitor over Bluetooth and
   shows what it sends, with a Copy report button. It's a step toward reading distance, pace and stroke
   rate straight from the rower.
+- **Rowing trends** (Rowing screen → Trends, or Rowing History → See trends), compared at the same
+  interval distance: time from interval end to the recovery target, pace per 500 m (average and best
+  interval), power per heartbeat (watts ÷ heart rate, the clearest fitness signal), stroke rate, the
+  latest workout's first half vs second half, meters per week, and bests. Each chart says whether the
+  latest workout beat your previous three.
 - Rowing has its own History (and CSV export), separate from slam ball's, and isn't in the slam ball
   Trends or baseline comparisons. About you (birthday, weight, max HR, heart rate warning) is
   reachable from both.

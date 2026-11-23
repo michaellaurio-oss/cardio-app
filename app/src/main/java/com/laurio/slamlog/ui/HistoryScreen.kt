@@ -39,7 +39,7 @@ private val dayFmt = SimpleDateFormat("EEE, MMM d, yyyy · h:mm a", Locale.US)
 fun HistoryScreen(
     sessions: List<Session>,
     onOpen: (Session) -> Unit,
-    /** Null hides "See trends" (rowing has no Trends screen yet). */
+    /** Null hides "See trends". */
     onTrends: (() -> Unit)?,
     onExport: () -> File,
     title: String = "HISTORY",

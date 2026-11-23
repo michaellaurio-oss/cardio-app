@@ -33,6 +33,7 @@ import com.laurio.slamlog.ui.HistoryScreen
 import com.laurio.slamlog.ui.HomeScreen
 import com.laurio.slamlog.ui.RowerTestScreen
 import com.laurio.slamlog.ui.RowingScreen
+import com.laurio.slamlog.ui.RowingTrendsScreen
 import com.laurio.slamlog.ui.StartScreen
 import com.laurio.slamlog.ui.SettingsScreen
 import com.laurio.slamlog.ui.SlamTheme
@@ -58,7 +59,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /** START is the first screen (strap + workout choice); HOME is the Slam Ball screen. */
-private enum class Screen { START, HOME, ROWING, ROWER_TEST, WORKOUT, SUMMARY, HISTORY, TRENDS, SETTINGS, ABOUT_YOU, BASELINE, BASELINE_SETTINGS }
+private enum class Screen { START, HOME, ROWING, ROWER_TEST, ROW_TRENDS, WORKOUT, SUMMARY, HISTORY, TRENDS, SETTINGS, ABOUT_YOU, BASELINE, BASELINE_SETTINGS }
 
 private fun neededPermissions(): Array<String> = buildList {
     if (Build.VERSION.SDK_INT >= 31) {
@@ -80,6 +81,7 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
     var settingsBack by rememberSaveable { mutableStateOf(Screen.START) }
     var summaryBack by rememberSaveable { mutableStateOf(Screen.HOME) }
     var workoutFrom by rememberSaveable { mutableStateOf(Screen.HOME) }
+    var rowTrendsBack by rememberSaveable { mutableStateOf(Screen.ROWING) }
     // Where Trends' Back goes (Home, or Baseline when opened from there).
     var trendsBack by rememberSaveable { mutableStateOf(Screen.HOME) }
     // Where About you's Back goes (Settings, or Home when opened from the birthday reminder).
@@ -148,9 +150,15 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onHistory = { historyBack = Screen.ROWING; screen = Screen.HISTORY },
                 onAboutYou = { aboutBack = Screen.ROWING; screen = Screen.ABOUT_YOU },
                 onRowerTest = { screen = Screen.ROWER_TEST },
+                onTrends = { rowTrendsBack = Screen.ROWING; screen = Screen.ROW_TRENDS },
                 onBack = { screen = Screen.START },
             )
             Screen.ROWER_TEST -> RowerTestScreen(vm, onBack = { screen = Screen.ROWING })
+            Screen.ROW_TRENDS -> RowingTrendsScreen(
+                sessions = sessions,
+                onOpen = { shown = it; summaryBack = Screen.ROW_TRENDS; screen = Screen.SUMMARY },
+                onBack = { screen = rowTrendsBack },
+            )
             Screen.WORKOUT -> WorkoutScreen(vm)
             Screen.SUMMARY -> {
                 val s = shown
@@ -175,7 +183,8 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 HistoryScreen(
                     sessions = list,
                     onOpen = { shown = it; summaryBack = Screen.HISTORY; screen = Screen.SUMMARY },
-                    onTrends = if (rowing) null else ({ trendsBack = Screen.HISTORY; screen = Screen.TRENDS }),
+                    onTrends = if (rowing) ({ rowTrendsBack = Screen.HISTORY; screen = Screen.ROW_TRENDS })
+                    else ({ trendsBack = Screen.HISTORY; screen = Screen.TRENDS }),
                     onExport = { vm.exportCsvFile(list) },
                     title = if (rowing) "ROWING HISTORY" else "SLAM BALL HISTORY",
                     onBack = { screen = historyBack },

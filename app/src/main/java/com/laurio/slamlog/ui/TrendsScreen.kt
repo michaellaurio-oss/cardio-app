@@ -342,12 +342,12 @@ fun TrendsScreen(sessions: List<Session>, settings: UserSettings, target: Int, o
 }
 
 @Composable
-private fun Choice(text: String, selected: Boolean, onClick: () -> Unit) {
+internal fun Choice(text: String, selected: Boolean, onClick: () -> Unit) {
     if (selected) Button(onClick = onClick) { Text(text) } else OutlinedButton(onClick = onClick) { Text(text) }
 }
 
 @Composable
-private fun Legend(items: List<Pair<Color, String>>) {
+internal fun Legend(items: List<Pair<Color, String>>) {
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         items.forEach { (c, label) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -360,7 +360,7 @@ private fun Legend(items: List<Pair<Color, String>>) {
 
 /** A simple line-and-dots chart of one value per workout, spaced by date. */
 @Composable
-private fun TrendChart(
+internal fun TrendChart(
     points: List<Pair<Long, Float>>,
     color: Color,
     format: (Float) -> String,

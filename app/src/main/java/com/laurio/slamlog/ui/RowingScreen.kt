@@ -47,6 +47,7 @@ fun RowingScreen(
     onHistory: () -> Unit,
     onAboutYou: () -> Unit,
     onRowerTest: () -> Unit,
+    onTrends: () -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -189,6 +190,7 @@ fun RowingScreen(
             OutlinedButton(onClick = onHistory, modifier = Modifier.weight(1f)) {
                 Text(if (rows.isEmpty()) "History" else "History (${rows.size})")
             }
+            OutlinedButton(onClick = onTrends, modifier = Modifier.weight(1f)) { Text("Trends") }
             // Birthday, weight, max HR and the heart rate warning apply to rowing too.
             OutlinedButton(onClick = onAboutYou, modifier = Modifier.weight(1f)) { Text("About you") }
         }
