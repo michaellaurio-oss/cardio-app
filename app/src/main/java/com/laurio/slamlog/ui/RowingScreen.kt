@@ -118,10 +118,15 @@ fun RowingScreen(
                 }
             }
             Text(
-                if (rowerOn) "Each interval ends by itself at ${s.rowDistanceM} m, and records your real pace, " +
-                    "stroke rate and watts. Just row: the app runs the intervals and the rests."
-                else "On the rower's monitor choose Connect App, then Find rower (or Reconnect). Without it, " +
-                    "tap INTERVAL DONE at the end of each interval.",
+                when {
+                    s.rowByTime && rowerOn -> "Intervals end on the clock; the rower adds your meters, pace, stroke rate and watts."
+                    s.rowByTime -> "Intervals end on the clock. Connect the rower (monitor on Connect App, then Find rower " +
+                        "or Reconnect) to also record meters, pace, stroke rate and watts."
+                    rowerOn -> "Each interval ends by itself at ${s.rowDistanceM} m, and records your real pace, " +
+                        "stroke rate and watts. Just row: the app runs the intervals and the rests."
+                    else -> "On the rower's monitor choose Connect App, then Find rower (or Reconnect). Without it, " +
+                        "tap INTERVAL DONE at the end of each interval."
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -132,9 +137,20 @@ fun RowingScreen(
             Stepper("Intervals", "${s.rowIntervals}",
                 onMinus = { set { it.copy(rowIntervals = (it.rowIntervals - 1).coerceAtLeast(1)) } },
                 onPlus = { set { it.copy(rowIntervals = (it.rowIntervals + 1).coerceAtMost(30)) } })
-            Stepper("Distance each", "${s.rowDistanceM} m",
-                onMinus = { set { it.copy(rowDistanceM = (it.rowDistanceM - 100).coerceAtLeast(100)) } },
-                onPlus = { set { it.copy(rowDistanceM = (it.rowDistanceM + 100).coerceAtMost(10_000)) } })
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Intervals by", Modifier.weight(1f))
+                Choice("Distance", !s.rowByTime) { set { it.copy(rowByTime = false) } }
+                Choice("Time", s.rowByTime) { set { it.copy(rowByTime = true) } }
+            }
+            if (s.rowByTime) {
+                Stepper("Time each", mmss(s.rowIntervalSec),
+                    onMinus = { set { it.copy(rowIntervalSec = (it.rowIntervalSec - 15).coerceAtLeast(15)) } },
+                    onPlus = { set { it.copy(rowIntervalSec = (it.rowIntervalSec + 15).coerceAtMost(30 * 60)) } })
+            } else {
+                Stepper("Distance each", "${s.rowDistanceM} m",
+                    onMinus = { set { it.copy(rowDistanceM = (it.rowDistanceM - 100).coerceAtLeast(100)) } },
+                    onPlus = { set { it.copy(rowDistanceM = (it.rowDistanceM + 100).coerceAtMost(10_000)) } })
+            }
             Stepper("Resistance", "${s.rowResistance}",
                 onMinus = { set { it.copy(rowResistance = (it.rowResistance - 1).coerceAtLeast(1)) } },
                 onPlus = { set { it.copy(rowResistance = (it.rowResistance + 1).coerceAtMost(20)) } })
@@ -163,7 +179,8 @@ fun RowingScreen(
         }
 
         Button(onClick = onStart, modifier = Modifier.fillMaxWidth().height(64.dp)) {
-            Text("START ROWING  ·  ${s.rowIntervals} × ${s.rowDistanceM} m", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("START ROWING  ·  ${s.rowIntervals} × " + (if (s.rowByTime) mmss(s.rowIntervalSec) else "${s.rowDistanceM} m"),
+                fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
 
         if (rows.isNotEmpty()) {

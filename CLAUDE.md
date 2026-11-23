@@ -48,7 +48,10 @@ He is the only user. Explain build and install steps plainly; he is not a day-to
   A rowing interval ends with the boxing bell (`Speaker.threeLeft`), not the long beep; the spoken time and
   pace wait `BELL_MS` so they don't talk over it. Michael asked for a bell he can hear over the rower.
   `ble/RowerProbe.kt` + `RowerTestScreen` (Rowing → Rower test) is the diagnostic that found all this.
-- Rowing analytics: `RowingTrendsScreen` (Screen.ROW_TRENDS), grouped by `distanceM`. Verdict = latest vs
+- Rowing by time: `UserSettings.rowByTime`/`rowIntervalSec` → `WorkoutConfig.intervalSec` (then `distanceM` = 0),
+  saved as `Session.intervalSec`. `tick()` beeps 3-2-1 and calls `endSet()` at the time; rower meters are still
+  recorded and give pace. `shape` shows "8 × 1:00".
+- Rowing analytics: `RowingTrendsScreen` (Screen.ROW_TRENDS), grouped by interval kind (same distance or same time). Verdict = latest vs
   average of the previous 3, under 2% = "about the same". Power per heartbeat = `avgWatts / avgHr`.
   Reuses `TrendChart`/`Choice`/`Legend` (internal in TrendsScreen.kt) and `HalfTable`.
 - Age comes from the stored birthday (`UserSettings.birthDate`), never a stored age.

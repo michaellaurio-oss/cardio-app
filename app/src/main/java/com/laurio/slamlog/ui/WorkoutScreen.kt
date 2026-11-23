@@ -104,7 +104,8 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
             (if (ui.baseline) "Baseline test · " else "") +
                 (if (ui.rowing) "Interval" else "Set").let { w ->
                     if (ui.setNumber == 0) "$w 1 of ${ui.totalSets} up next" else "$w ${ui.setNumber} of ${ui.totalSets}"
-                } + (if (ui.rowing) " · ${ui.distanceM} m" + (if (ui.resistance > 0) " · resistance ${ui.resistance}" else "") else ""),
+                } + (if (ui.rowing) " · " + (if (ui.intervalSec > 0) mmss(ui.intervalSec) else "${ui.distanceM} m") +
+                    (if (ui.resistance > 0) " · resistance ${ui.resistance}" else "") else ""),
             style = MaterialTheme.typography.titleMedium,
             color = if (ui.baseline) Sky else MaterialTheme.colorScheme.onSurface,
         )
@@ -113,6 +114,18 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
         Box {
         SectionCard {
             when {
+                ui.phase == Phase.WORK && ui.rowing && ui.intervalSec > 0 -> {
+                    // By time: time left is the big number; it ends by itself.
+                    Text(mmss((ui.intervalSec - ui.setElapsedSec).coerceAtLeast(0)), Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center, fontSize = 96.sp, fontWeight = FontWeight.Black, color = Orange)
+                    Text(if (ui.rowLive) "time left · ${ui.rowMeters} m this interval" else "time left",
+                        Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (ui.rowLive) Row {
+                        Stat("pace /500", ui.paceSec?.let { mmss(it) } ?: "—", Modifier.weight(1f), color = Sky)
+                        Stat("strokes/min", ui.spm?.let { "${it.roundToInt()}" } ?: "—", Modifier.weight(1f))
+                        Stat("watts", ui.watts?.let { "$it" } ?: "—", Modifier.weight(1f))
+                    }
+                }
                 ui.phase == Phase.WORK && ui.rowing && ui.rowLive -> {
                     // Read from the rower: meters left is the big number.
                     Text("${(ui.distanceM - ui.rowMeters).coerceAtLeast(0)}", Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
@@ -220,7 +233,7 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
 
         // ---- Controls ----
         when (ui.phase) {
-            Phase.WORK -> if (ui.rowing && ui.rowLive) {
+            Phase.WORK -> if (ui.rowing && (ui.rowLive || ui.intervalSec > 0)) {
                 // The rower ends the interval; this is just a way out.
                 OutlinedButton(onClick = { vm.endSet() }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                     Text("End interval now")
@@ -267,7 +280,11 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
                     val hrPart = if (s.avgHr > 0) " · avg ${s.avgHr} · peak ${s.peakHr}" else ""
                     val recPart = s.recoveryBpm?.let { " · ↓$it" } ?: ""
                     val toTarget = s.timeToTargetSec?.let { " · ${s.targetHr} in ${mmss(it)}" } ?: ""
-                    val main = if (ui.rowing) {
+                    val main = if (ui.rowing && ui.intervalSec > 0) {
+                        val pace = if (s.meters > 0 && s.durationSec > 0) ", ${mmss((s.durationSec * 500.0 / s.meters).roundToInt())}/500 m" else ""
+                        val spm = if (s.avgSpm > 0) " · ${s.avgSpm.roundToInt()} spm" else ""
+                        "Interval ${s.number}: " + (if (s.meters > 0) "${s.meters} m$pace" else mmss(s.durationSec)) + spm
+                    } else if (ui.rowing) {
                         val m = if (s.meters > 0) s.meters else ui.distanceM
                         val pace = if (m > 0 && s.durationSec > 0) " (${mmss((s.durationSec * 500.0 / m).roundToInt())}/500 m)" else ""
                         val spm = if (s.avgSpm > 0) " · ${s.avgSpm.roundToInt()} spm" else ""

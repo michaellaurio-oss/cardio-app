@@ -26,6 +26,8 @@ class SettingsStore(context: Context) {
         hrAlarmBpm = p.getInt("hrAlarmBpm", 0),
         rowIntervals = p.getInt("rowIntervals", 8),
         rowDistanceM = p.getInt("rowDistanceM", 500),
+        rowByTime = p.getBoolean("rowByTime", false),
+        rowIntervalSec = p.getInt("rowIntervalSec", 60),
         rowResistance = p.getInt("rowResistance", 5),
         rowRestUntilTarget = p.getBoolean("rowRestUntilTarget", true),
         rowMinRestSec = p.getInt("rowMinRestSec", 60),
@@ -55,6 +57,8 @@ class SettingsStore(context: Context) {
             .putInt("hrAlarmBpm", s.hrAlarmBpm)
             .putInt("rowIntervals", s.rowIntervals)
             .putInt("rowDistanceM", s.rowDistanceM)
+            .putBoolean("rowByTime", s.rowByTime)
+            .putInt("rowIntervalSec", s.rowIntervalSec)
             .putInt("rowResistance", s.rowResistance)
             .putBoolean("rowRestUntilTarget", s.rowRestUntilTarget)
             .putInt("rowMinRestSec", s.rowMinRestSec)

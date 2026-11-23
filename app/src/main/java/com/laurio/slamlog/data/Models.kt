@@ -35,6 +35,8 @@ data class WorkoutConfig(
     /** Rowing: meters per interval, and the resistance set on the rower. Not saved here. */
     val distanceM: Int = 0,
     val resistance: Int = 0,
+    /** Rowing by time: seconds per interval (then [distanceM] is 0). */
+    val intervalSec: Int = 0,
 )
 
 /** Personal details (for zones and calories) and app preferences. */
@@ -72,6 +74,9 @@ data class UserSettings(
     // ---- Rowing machine workout (set the same intervals on the rower's monitor) ----
     val rowIntervals: Int = 8,
     val rowDistanceM: Int = 500,
+    /** Rowing intervals by time instead of distance, and the time each. */
+    val rowByTime: Boolean = false,
+    val rowIntervalSec: Int = 60,
     val rowResistance: Int = 5,
     val rowRestUntilTarget: Boolean = true,
     val rowMinRestSec: Int = 60,
@@ -193,6 +198,8 @@ data class Session(
     /** Rowing: meters per interval and the rower's resistance setting; 0 for slam ball. */
     val distanceM: Int = 0,
     val resistance: Int = 0,
+    /** Rowing by time: seconds per interval (distanceM is then 0). */
+    val intervalSec: Int = 0,
 ) {
     val totalReps: Int get() = sets.sumOf { it.reps }
 
@@ -235,7 +242,8 @@ data class Session(
     /** Short description like "10 × 20 · 20 lb", or for rowing "8 × 500 m · resistance 5". */
     val shape: String get() {
         val n = if (plannedSets > 0) plannedSets else sets.size
-        return if (isRow) "$n × $distanceM m" + (if (resistance > 0) " · resistance $resistance" else "")
+        val each = if (intervalSec > 0) "%d:%02d".format(intervalSec / 60, intervalSec % 60) else "$distanceM m"
+        return if (isRow) "$n × $each" + (if (resistance > 0) " · resistance $resistance" else "")
         else "$n × $targetReps · $ballWeightLbs lb"
     }
 
@@ -288,6 +296,7 @@ data class Session(
         .put("activity", activity.key)
         .put("distanceM", distanceM)
         .put("resistance", resistance)
+        .put("intervalSec", intervalSec)
 
     companion object {
         fun fromJson(o: JSONObject): Session {
@@ -315,6 +324,7 @@ data class Session(
                 activity = Activity.of(o.optString("activity", "slam")),
                 distanceM = o.optInt("distanceM", 0),
                 resistance = o.optInt("resistance", 0),
+                intervalSec = o.optInt("intervalSec", 0),
             )
         }
     }

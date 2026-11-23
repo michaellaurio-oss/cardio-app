@@ -65,7 +65,8 @@ The first screen connects the heart rate strap and offers two workouts: **Slam B
 above, unchanged) and **Rowing Machine**. History and settings belong to each workout, so they're on
 the Slam Ball and Rowing screens rather than the first screen.
 
-- Set **intervals**, **distance each**, **resistance** and rest on the Rowing screen, the same as you
+- Intervals by **distance** or by **time**. Set **intervals**, **distance each** (or **time each**),
+  **resistance** and rest on the Rowing screen, the same as you
   set them on the rower's monitor. Rowing has its own recovery target and rest settings.
 - **Connect the rower** (Rowing screen → Find rower; on the Rogue Echo Rower's monitor choose
   Connect App first). It reads the monitor over the standard Bluetooth fitness-machine service, so the
