@@ -145,7 +145,7 @@ fun RowingScreen(
             if (s.rowByTime) {
                 Stepper("Time each", mmss(s.rowIntervalSec),
                     onMinus = { set { it.copy(rowIntervalSec = (it.rowIntervalSec - 30).coerceAtLeast(30)) } },
-                    onPlus = { set { it.copy(rowIntervalSec = (it.rowIntervalSec + 30).coerceAtMost(30 * 60)) } })
+                    onPlus = { set { it.copy(rowIntervalSec = (it.rowIntervalSec + 30).coerceAtMost(60 * 60)) } })
             } else {
                 Stepper("Distance each", "${s.rowDistanceM} m",
                     onMinus = { set { it.copy(rowDistanceM = (it.rowDistanceM - 100).coerceAtLeast(100)) } },
