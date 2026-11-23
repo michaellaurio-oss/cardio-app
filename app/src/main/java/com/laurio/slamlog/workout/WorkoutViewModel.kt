@@ -410,7 +410,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             Phase.GET_READY -> {
                 val left = u.secondsLeft - 1
                 _ui.value = base.copy(secondsLeft = left)
-                if (left in 1..3) speaker.countdownBeep()
+                if (left in 1..3) speaker.beepShort()
                 if (left <= 0) startSet()
             }
 
@@ -453,7 +453,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
                 _ui.value = next
                 if (u.phase == Phase.REST) {
                     if (left == 10 && !(cfg.restUntilTarget && waitingForTarget)) speaker.say("10 seconds.")
-                    if (left in 1..3) speaker.countdownBeep()
+                    if (left in 1..3) speaker.beepShort()
                     if (left <= 0) startSet()
                 } else if ((left <= 0 && !waitingForTarget) || restElapsed >= MAX_RECOVERY_SEC) {
                     // The final check runs at least a minute, and on until HR reaches the target (5 min cap).
@@ -494,11 +494,9 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         lastTapAt = 0L
         setStartedAt = SystemClock.elapsedRealtime()
         detector.armed = cfg.autoCount && detector.isRunning
-        // The go tone after the 3-2-1 countdown beeps; the callout follows it rather than talking over it.
-        speaker.goBeep()
+        speaker.beepLong()
         val word = if (rowing) "interval" else "set"
-        val callout = if (number == cfg.sets && cfg.sets > 1) "Last $word. Go!" else "${word.replaceFirstChar { it.uppercase() }} $number. Go!"
-        viewModelScope.launch { delay(Speaker.GO_MS + 50L); speaker.say(callout) }
+        speaker.say(if (number == cfg.sets && cfg.sets > 1) "Last $word. Go!" else "${word.replaceFirstChar { it.uppercase() }} $number. Go!")
     }
 
     private fun onSlam() {
