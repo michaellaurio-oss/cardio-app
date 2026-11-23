@@ -1,6 +1,8 @@
-# CLAUDE.md: Slam Log
+# CLAUDE.md: Cardio Log (formerly Slam Log)
 
-Michael's personal Android app for slam ball workouts with a COOSPO H808S heart rate chest strap.
+Michael's personal Android app for slam ball and rowing machine (Rogue Echo Rower) workouts with a COOSPO
+H808S heart rate chest strap. Renamed from Slam Log: only the display name changed; the package
+(`com.laurio.slamlog`), application id, repo name and storage stay the same so updates keep his history.
 He is the only user. Explain build and install steps plainly; he is not a day-to-day Android developer.
 
 ## What matters most

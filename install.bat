@@ -1,5 +1,5 @@
 @echo off
-rem Build Slam Log and install it on the phone plugged in by USB.
+rem Build Cardio Log and install it on the phone plugged in by USB.
 rem Double-click this file, or run it from PowerShell / Command Prompt.
 cd /d "%~dp0"
 rem Toolchain lives in D:\Users\<your Windows username>\Android by default.
@@ -10,7 +10,7 @@ set JAVA_HOME=%ANDROID_DIR%\jdk-17
 set ADB=%ANDROID_DIR%\sdk\platform-tools\adb.exe
 
 echo.
-echo === Building Slam Log (the first build takes a few minutes) ===
+echo === Building Cardio Log (the first build takes a few minutes) ===
 call gradlew.bat assembleDebug
 if errorlevel 1 (
   echo.
@@ -35,5 +35,5 @@ if errorlevel 1 (
 )
 
 echo.
-echo Done. Slam Log is in your phone's app drawer.
+echo Done. Cardio Log is in your phone's app drawer.
 pause

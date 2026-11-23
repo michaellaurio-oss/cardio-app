@@ -1,4 +1,4 @@
-# Rebuilding Slam Log on a new or wiped PC
+# Rebuilding Cardio Log on a new or wiped PC
 
 In the paths below, `<you>` is your Windows username.
 

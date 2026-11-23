@@ -40,8 +40,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk "SlamLog-$TAG.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "CardioLog-$TAG.apk"
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "$TAG" "SlamLog-$TAG.apk" \
-            --title "Slam Log $TAG" \
-            --notes "Download SlamLog-$TAG.apk on an Android phone and open it to install. Installs over earlier versions and keeps workout history."
+          gh release create "$TAG" "CardioLog-$TAG.apk" \
+            --title "Cardio Log $TAG" \
+            --notes "Download CardioLog-$TAG.apk on an Android phone and open it to install. Installs over earlier versions and keeps workout history."

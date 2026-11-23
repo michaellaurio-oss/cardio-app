@@ -122,7 +122,7 @@ class WorkoutService : Service() {
             }
             return NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_workout)
-                .setContentTitle("Slam Log")
+                .setContentTitle("Cardio Log")
                 .setContentText(text)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)

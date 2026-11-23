@@ -1,8 +1,10 @@
-# Slam Log
+# Cardio Log
 
-An Android app for slam ball workouts, built around a Bluetooth chest strap (COOSPO H808S, or any strap
-that uses the standard Bluetooth Heart Rate service). It counts slams by listening through the microphone,
-coaches with voice and beeps, and tracks how fast your heart rate recovers after each set.
+An Android app for slam ball and rowing machine workouts, built around a Bluetooth chest strap (COOSPO
+H808S, or any strap that uses the standard Bluetooth Heart Rate service). For slam ball it counts slams
+by listening through the microphone; for rowing it runs your intervals. Either way it coaches with voice
+and beeps, and tracks how fast your heart rate recovers after each set or interval. (It started as
+"Slam Log".)
 
 <p>
   <img src="docs/screenshots/slam.jpg" width="200" alt="Counting slams during a set">
@@ -22,7 +24,7 @@ Releases are built by GitHub Actions ([release.yml](.github/workflows/release.ym
 
 ## The headline metric: last slam → 130
 
-After every set, Slam Log starts a clock at your **last slam** and stops it when your heart rate falls to
+After every set, the app starts a clock at your **last slam** and stops it when your heart rate falls to
 your recovery target (130 bpm by default; change it in the Training workout section on Home). You see it:
 
 - live on the rest screen, counting up, with a voice callout when you hit it ("130 in 48 seconds")
@@ -129,7 +131,7 @@ Requires Android 8.0 or newer.
 
 **Lost or replaced the PC?** See [RECOVERY.md](RECOVERY.md) for rebuilding from GitHub.
 
-**Why the signing key is committed.** `app/debug.keystore` is in the repo on purpose. Slam Log is a
+**Why the signing key is committed.** `app/debug.keystore` is in the repo on purpose. Cardio Log is a
 sideloaded personal app, not a Play Store release, and Android only installs an update over an
 existing app if both are signed with the same key. Keeping the key with the code means any PC, and
 the GitHub release build, can update the installed app without uninstalling it, which would delete
@@ -158,7 +160,7 @@ the Play Store would use a private upload key instead.
 - Loud music or other people slamming nearby can add extra reps: use −1, or lower sensitivity.
 - The screen stays on during a workout. If you switch apps or the screen goes off, the workout keeps
   running: a "workout in progress" notification shows the current set or rest, and tapping it brings
-  you back. (Allow notifications when asked, so you can see it.) Swiping Slam Log away from recent
+  you back. (Allow notifications when asked, so you can see it.) Swiping Cardio Log away from recent
   apps still ends the workout.
 
 ## Project layout

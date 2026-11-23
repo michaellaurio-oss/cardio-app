@@ -682,7 +682,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         val dir = File(getApplication<Application>().cacheDir, "exports").apply { mkdirs() }
         dir.listFiles()?.forEach { it.delete() }
         val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        return File(dir, "slam-log-workouts-$stamp.csv").apply { writeText(buildCsv(_sessions.value)) }
+        return File(dir, "cardio-log-workouts-$stamp.csv").apply { writeText(buildCsv(_sessions.value)) }
     }
 
     fun setLocked(session: Session, value: Boolean): Session {
