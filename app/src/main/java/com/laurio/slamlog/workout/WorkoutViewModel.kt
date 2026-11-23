@@ -571,15 +571,20 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             targetHr = target,
             timeToTarget = result.timeToTargetSec,
         )
-        speaker.beepLong()
+        // Rowing: the boxing bell marks the end of the interval (it's easy to miss a beep over the fan),
+        // and the spoken time and pace wait until it has rung.
+        if (rowing) speaker.threeLeft() else speaker.beepLong()
+        val sayAfterBell: (String) -> Unit = { text ->
+            if (rowing) viewModelScope.launch { delay(Speaker.BELL_MS + 150L); speaker.say(text) } else speaker.say(text)
+        }
         if (u.setNumber >= cfg.sets) {
             _ui.value = common.copy(phase = Phase.RECOVERY, secondsLeft = 60)
-            speaker.say("Workout complete. Stand still for the recovery check.")
+            sayAfterBell("Workout complete. Stand still for the recovery check.")
         } else {
             // Rest until target: the minimum rest counts down, then holds if HR isn't there yet.
             val restLen = if (cfg.restUntilTarget) cfg.minRestSec else cfg.restSec
             _ui.value = common.copy(phase = Phase.REST, secondsLeft = restLen, holding = false)
-            speaker.say(
+            sayAfterBell(
                 if (rowing) "Interval ${u.setNumber} done in ${spokenTime(u.setElapsedSec)}." +
                     (if (intervalMeters > 0) " Pace ${spokenPace(u.setElapsedSec * 500.0 / intervalMeters)}." else "") + " Rest."
                 else "Set ${u.setNumber} done. ${u.reps} reps. Rest.",

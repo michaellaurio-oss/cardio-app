@@ -43,6 +43,8 @@ He is the only user. Explain build and install steps plainly; he is not a day-to
   `SettingsStore.rowerAddress`, auto-retry on drop) and parses; the VM's `onRowerData` counts meters per
   interval from increases of the monitor's distance (resets/rest rowing ignored), ends the interval at
   `distanceM`, and stores `SetResult.meters/strokes/avgSpm/avgWatts`. Without the rower, INTERVAL DONE.
+  A rowing interval ends with the boxing bell (`Speaker.threeLeft`), not the long beep; the spoken time and
+  pace wait `BELL_MS` so they don't talk over it. Michael asked for a bell he can hear over the rower.
   `ble/RowerProbe.kt` + `RowerTestScreen` (Rowing → Rower test) is the diagnostic that found all this.
 - Age comes from the stored birthday (`UserSettings.birthDate`), never a stored age.
 

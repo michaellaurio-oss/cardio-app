@@ -203,7 +203,7 @@ class Speaker(context: Context) : TextToSpeech.OnInitListener {
         klaxonTrack?.release()
     }
 
-    private companion object {
+    companion object {
         const val STRIKES = 3
         const val STRIKE_GAP_MS = 190
         const val BELL_MS = (STRIKES - 1) * STRIKE_GAP_MS + 420
