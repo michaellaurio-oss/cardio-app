@@ -60,6 +60,8 @@ data class WorkoutConfig(
     /** Walk/run: treadmill speed (tenths of mph) and incline (tenths of %), as set. Not saved here. */
     val speedTenthsMph: Int = 0,
     val inclineTenths: Int = 0,
+    /** Walk/run: walking speed between runs (tenths of mph). */
+    val walkSpeedTenthsMph: Int = 0,
 ) {
     /**
      * Seconds after which an interval ends on the clock: the set time, or for walk/run by distance the time
@@ -125,6 +127,8 @@ data class UserSettings(
     val runDistanceHundredthsMi: Int = 25,
     /** Treadmill speed in tenths of mph (60 = 6.0) and incline in tenths of % (10 = 1.0%). */
     val runSpeedTenthsMph: Int = 60,
+    /** Walking speed between runs, tenths of mph (30 = 3.0). */
+    val runWalkSpeedTenthsMph: Int = 30,
     val runInclineTenths: Int = 10,
     val runRestUntilTarget: Boolean = true,
     val runMinRestSec: Int = 60,
@@ -250,6 +254,8 @@ data class Session(
     /** Walk/run: treadmill speed (tenths of mph) and incline (tenths of %) as set; 0 = not set. */
     val speedTenthsMph: Int = 0,
     val inclineTenths: Int = 0,
+    /** Walk/run: walking speed between runs (tenths of mph); 0 = not set. */
+    val walkSpeedTenthsMph: Int = 0,
 ) {
     val totalReps: Int get() = sets.sumOf { it.reps }
 
@@ -302,7 +308,9 @@ data class Session(
         val each = if (intervalSec > 0) "%d:%02d".format(intervalSec / 60, intervalSec % 60) else Units.distance(activity, distanceM)
         return when (activity) {
             Activity.ROW -> "$n × $each" + (if (resistance > 0) " · resistance $resistance" else "")
-            Activity.RUN -> "$n × $each" + (if (speedTenthsMph > 0) " · %.1f mph".format(speedTenthsMph / 10.0) else "") +
+            Activity.RUN -> "$n × $each" + (if (speedTenthsMph > 0) " · run %.1f".format(speedTenthsMph / 10.0) else "") +
+                (if (walkSpeedTenthsMph > 0) " / walk %.1f".format(walkSpeedTenthsMph / 10.0) else "") +
+                (if (speedTenthsMph > 0) " mph" else "") +
                 (if (inclineTenths > 0) " · %.1f%% incline".format(inclineTenths / 10.0) else "")
             Activity.SLAM -> "$n × $targetReps · $ballWeightLbs lb"
         }
@@ -360,6 +368,7 @@ data class Session(
         .put("intervalSec", intervalSec)
         .put("speedTenthsMph", speedTenthsMph)
         .put("inclineTenths", inclineTenths)
+        .put("walkSpeedTenthsMph", walkSpeedTenthsMph)
 
     companion object {
         fun fromJson(o: JSONObject): Session {
@@ -390,6 +399,7 @@ data class Session(
                 intervalSec = o.optInt("intervalSec", 0),
                 speedTenthsMph = o.optInt("speedTenthsMph", 0),
                 inclineTenths = o.optInt("inclineTenths", 0),
+                walkSpeedTenthsMph = o.optInt("walkSpeedTenthsMph", 0),
             )
         }
     }

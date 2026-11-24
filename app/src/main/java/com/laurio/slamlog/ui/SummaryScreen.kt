@@ -111,7 +111,8 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
             }
             Row {
                 Stat("avg pace", session.avgPace?.let { "${mmss(it.roundToInt())}${if (run) "/mi" else "/500"}" } ?: "—", Modifier.weight(1f), color = Sky)
-                if (run) Stat("mph · incline", if (session.speedTenthsMph > 0) "%.1f · %.1f%%".format(session.speedTenthsMph / 10.0, session.inclineTenths / 10.0) else "—", Modifier.weight(1f))
+                if (run) Stat("run / walk mph", if (session.speedTenthsMph > 0) "%.1f / %s".format(session.speedTenthsMph / 10.0,
+                    if (session.walkSpeedTenthsMph > 0) "%.1f".format(session.walkSpeedTenthsMph / 10.0) else "—") else "—", Modifier.weight(1f))
                 else Stat("resistance", if (session.resistance > 0) "${session.resistance}" else "—", Modifier.weight(1f))
                 Stat("calories", if (hasHr) "${session.calories.roundToInt()}" else "—", Modifier.weight(1f))
             }

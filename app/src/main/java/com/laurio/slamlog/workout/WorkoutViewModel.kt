@@ -314,6 +314,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
                 intervalSec = if (s.runByTime) s.runIntervalSec else 0,
                 speedTenthsMph = s.runSpeedTenthsMph,
                 inclineTenths = s.runInclineTenths,
+                walkSpeedTenthsMph = s.runWalkSpeedTenthsMph,
             ),
         )
     }
@@ -559,7 +560,13 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         detector.armed = cfg.autoCount && detector.isRunning
         speaker.beepLong()
         val word = if (machine) "interval" else "set"
-        speaker.say(if (number == cfg.sets && cfg.sets > 1) "Last $word. Go!" else "${word.replaceFirstChar { it.uppercase() }} $number. Go!")
+        if (cfg.activity == Activity.RUN) {
+            // Tell him the treadmill speed to set for the run.
+            val sp = if (cfg.speedTenthsMph > 0) " Speed ${spokenSpeed(cfg.speedTenthsMph)}." else ""
+            speaker.say((if (number == cfg.sets && cfg.sets > 1) "Last run." else "Run $number.") + "$sp Go!")
+        } else {
+            speaker.say(if (number == cfg.sets && cfg.sets > 1) "Last $word. Go!" else "${word.replaceFirstChar { it.uppercase() }} $number. Go!")
+        }
     }
 
     private fun onSlam() {
@@ -658,10 +665,10 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             sayAfterBell(
                 if (machine && cfg.intervalSec > 0) "Interval ${u.setNumber} done." +
                     (if (intervalMeters > 0) " ${Units.spokenDistance(cfg.activity, intervalMeters)}, pace ${spokenPace(u.setElapsedSec * Units.paceMeters(cfg.activity) / intervalMeters)}." else "") +
-                    (if (cfg.activity == Activity.RUN) " Walk." else " Rest.")
+                    (if (cfg.activity == Activity.RUN) " Walk" + (if (cfg.walkSpeedTenthsMph > 0) ", speed ${spokenSpeed(cfg.walkSpeedTenthsMph)}." else ".") else " Rest.")
                 else if (machine) "Interval ${u.setNumber} done in ${spokenTime(u.setElapsedSec)}." +
                     (if (intervalMeters > 0) " Pace ${spokenPace(u.setElapsedSec * Units.paceMeters(cfg.activity) / intervalMeters)}." else "") +
-                    (if (cfg.activity == Activity.RUN) " Walk." else " Rest.")
+                    (if (cfg.activity == Activity.RUN) " Walk" + (if (cfg.walkSpeedTenthsMph > 0) ", speed ${spokenSpeed(cfg.walkSpeedTenthsMph)}." else ".") else " Rest.")
                 else "Set ${u.setNumber} done. ${u.reps} reps. Rest.",
             )
         }
@@ -717,6 +724,9 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun setLastSet(sets: List<SetResult>, change: (SetResult) -> SetResult): List<SetResult> =
         if (sets.isEmpty()) sets else sets.dropLast(1) + change(sets.last())
+
+    /** "6 point 5" for 6.5 mph; "3" for 3.0. */
+    private fun spokenSpeed(tenths: Int): String = if (tenths % 10 == 0) "${tenths / 10}" else "${tenths / 10} point ${tenths % 10}"
 
     /** "1 52" for 1:52 per 500 m, the way rowers say it. */
     private fun spokenPace(sec: Double): String {
@@ -792,6 +802,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             intervalSec = cfg.intervalSec,
             speedTenthsMph = cfg.speedTenthsMph,
             inclineTenths = cfg.inclineTenths,
+            walkSpeedTenthsMph = cfg.walkSpeedTenthsMph,
         )
         sessionStore.save(session)
         _sessions.value = sessionStore.load()

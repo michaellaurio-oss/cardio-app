@@ -95,11 +95,14 @@ the Slam Ball and Rowing screens rather than the first screen.
 The third workout on the first screen: run intervals on a treadmill, walking between them until your
 heart rate comes back down.
 
-- Intervals by **time** (default 2:00, 30-second steps) or **distance** (default 0.25 mi, 0.05 mi
-  steps). Set **speed** (mph) and **incline** to what you use on the treadmill; they're saved with the
-  workout. Walk/run has its own recovery target and walk (rest) settings.
-- The end of each run interval rings the bell, says your pace per mile, and starts the walk and the
-  clock to your recovery target, the same as rowing and slam ball.
+- **Run**: run time (default 2:00, 30-second steps) or run distance (default 0.25 mi, 0.05 mi steps),
+  and **run speed**. **Walk**: **walk time** and **walk speed**, with "keep walking until HR ≤ target"
+  (the walk lasts the walk time or until you've recovered, whichever is longer) or an exact walk.
+  Plus **incline**, the number of intervals and walk/run's own recovery target. Speeds and incline are
+  saved with the workout.
+- The app calls out the speed to set as each run starts ("Run 2. Speed 6 point 5. Go!") and as each
+  walk starts ("Walk, speed 3."). The end of each run rings the bell, says your pace per mile, and
+  starts the clock to your recovery target, the same as rowing and slam ball.
 - Every run interval ends by itself: by time on the clock, by distance when that distance at the
   set speed is up (3-2-1 beeps first). Distance and pace come from the speed you set; the treadmill
   doesn't need Bluetooth. Heart rate (and the recovery clock) comes from the chest strap as usual.

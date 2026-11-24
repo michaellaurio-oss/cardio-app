@@ -38,6 +38,7 @@ class SettingsStore(context: Context) {
         runIntervalSec = p.getInt("runIntervalSec", 120),
         runDistanceHundredthsMi = p.getInt("runDistanceHundredthsMi", 25),
         runSpeedTenthsMph = p.getInt("runSpeedTenthsMph", 60),
+        runWalkSpeedTenthsMph = p.getInt("runWalkSpeedTenthsMph", 30),
         runInclineTenths = p.getInt("runInclineTenths", 10),
         runRestUntilTarget = p.getBoolean("runRestUntilTarget", true),
         runMinRestSec = p.getInt("runMinRestSec", 60),
@@ -79,6 +80,7 @@ class SettingsStore(context: Context) {
             .putInt("runIntervalSec", s.runIntervalSec)
             .putInt("runDistanceHundredthsMi", s.runDistanceHundredthsMi)
             .putInt("runSpeedTenthsMph", s.runSpeedTenthsMph)
+            .putInt("runWalkSpeedTenthsMph", s.runWalkSpeedTenthsMph)
             .putInt("runInclineTenths", s.runInclineTenths)
             .putBoolean("runRestUntilTarget", s.runRestUntilTarget)
             .putInt("runMinRestSec", s.runMinRestSec)

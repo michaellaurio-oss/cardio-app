@@ -57,7 +57,9 @@ He is the only user. Explain build and install steps plainly; he is not a day-to
   RUN, meters and /500 m for ROW; `Session.pace()`/`avgPace`/`paceUnit` (was pace500). `RowerManager(kind =
   TREADMILL)` (`vm.treadmill`) reads FTMS Treadmill Data 0x2ACD (speed, distance, incline, power) with its own
   saved address; never tested, and Michael's treadmill has NO Bluetooth, so the Walk/Run screen hides the
-  treadmill card and test (code kept). HR is what matters for walk/run. `WorkoutConfig.clockEndSec`: run intervals
+  treadmill card and test (code kept). HR is what matters for walk/run. Run screen asks run time/distance + run speed, walk time
+  (one value written to both `runMinRestSec`/`runRestSec`) + walk speed (`runWalkSpeedTenthsMph`, saved as
+  `Session.walkSpeedTenthsMph`), incline. Speech calls the speed to set at each run and walk. `WorkoutConfig.clockEndSec`: run intervals
   end on the clock, by time or distance ÷ set speed; meters/pace come from the set speed. `RowingTrendsScreen(activity=…)` and `RowerTestScreen(treadmill=…)`
   serve both machines.
 - Rowing analytics: `RowingTrendsScreen` (Screen.ROW_TRENDS), grouped by interval kind (same distance or same time). Verdict = latest vs
