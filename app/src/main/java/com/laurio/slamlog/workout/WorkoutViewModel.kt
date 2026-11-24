@@ -359,7 +359,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             activity = cfg.activity,
             distanceM = cfg.distanceM,
             resistance = cfg.resistance,
-            intervalSec = cfg.intervalSec,
+            // The screen counts down whenever the interval ends on the clock (time, or walk/run distance at the set speed).
+            intervalSec = cfg.clockEndSec,
         )
         if (machine) {
             val each = if (cfg.intervalSec > 0) spokenTime(cfg.intervalSec) else Units.spokenDistance(cfg.activity, cfg.distanceM)
@@ -471,9 +472,9 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
                     setElapsedSec = elapsed,
                     rowLive = machine && machineConnected(),
                 )
-                // Rowing by time: 3-2-1 beeps, then the interval ends by itself.
-                if (machine && cfg.intervalSec > 0) {
-                    val left = cfg.intervalSec - elapsed
+                // Ends on the clock (by time, or walk/run distance at the set speed): 3-2-1 beeps, then it ends.
+                if (machine && cfg.clockEndSec > 0 && !(cfg.activity == Activity.RUN && cfg.intervalSec == 0 && machineConnected())) {
+                    val left = cfg.clockEndSec - elapsed
                     if (left in 1..3) speaker.beepShort()
                     if (left <= 0) endSet()
                 }

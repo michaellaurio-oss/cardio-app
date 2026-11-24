@@ -161,7 +161,6 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onStart = { workoutFrom = Screen.RUN; vm.startRun(); screen = Screen.WORKOUT },
                 onOpen = { shown = it; summaryBack = Screen.RUN; screen = Screen.SUMMARY },
                 onHistory = { historyBack = Screen.RUN; screen = Screen.HISTORY },
-                onTreadmillTest = { machineActivity = Activity.RUN; screen = Screen.ROWER_TEST },
                 onTrends = { machineActivity = Activity.RUN; rowTrendsBack = Screen.RUN; screen = Screen.ROW_TRENDS },
                 onBack = { screen = Screen.START },
             )

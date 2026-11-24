@@ -107,7 +107,7 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
             (if (ui.baseline) "Baseline test · " else "") +
                 (if (ui.machine) "Interval" else "Set").let { w ->
                     if (ui.setNumber == 0) "$w 1 of ${ui.totalSets} up next" else "$w ${ui.setNumber} of ${ui.totalSets}"
-                } + (if (ui.machine) " · " + (if (ui.intervalSec > 0) mmss(ui.intervalSec) else Units.distance(ui.activity, ui.distanceM)) +
+                } + (if (ui.machine) " · " + (if (ui.distanceM > 0) Units.distance(ui.activity, ui.distanceM) else mmss(ui.intervalSec)) +
                     (if (ui.resistance > 0) " · resistance ${ui.resistance}" else "") else ""),
             style = MaterialTheme.typography.titleMedium,
             color = if (ui.baseline) Sky else MaterialTheme.colorScheme.onSurface,
@@ -278,7 +278,7 @@ fun WorkoutScreen(vm: WorkoutViewModel) {
                     val hrPart = if (s.avgHr > 0) " · avg ${s.avgHr} · peak ${s.peakHr}" else ""
                     val recPart = s.recoveryBpm?.let { " · ↓$it" } ?: ""
                     val toTarget = s.timeToTargetSec?.let { " · ${s.targetHr} in ${mmss(it)}" } ?: ""
-                    val main = if (ui.machine && ui.intervalSec > 0) {
+                    val main = if (ui.machine && ui.intervalSec > 0 && ui.distanceM == 0) {
                         val pace = if (s.meters > 0 && s.durationSec > 0) ", ${mmss((s.durationSec * Units.paceMeters(ui.activity) / s.meters).roundToInt())}${Units.paceLabel(ui.activity)}" else ""
                         val spm = if (s.avgSpm > 0) " · ${s.avgSpm.roundToInt()} spm" else ""
                         "Interval ${s.number}: " + (if (s.meters > 0) "${Units.distance(ui.activity, s.meters)}$pace" else mmss(s.durationSec)) + spm

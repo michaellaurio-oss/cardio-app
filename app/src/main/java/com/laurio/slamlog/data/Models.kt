@@ -60,7 +60,18 @@ data class WorkoutConfig(
     /** Walk/run: treadmill speed (tenths of mph) and incline (tenths of %), as set. Not saved here. */
     val speedTenthsMph: Int = 0,
     val inclineTenths: Int = 0,
-)
+) {
+    /**
+     * Seconds after which an interval ends on the clock: the set time, or for walk/run by distance the time
+     * the distance takes at the set speed (his treadmill has no Bluetooth). 0 = no clock end.
+     */
+    val clockEndSec: Int get() = when {
+        intervalSec > 0 -> intervalSec
+        activity == Activity.RUN && distanceM > 0 && speedTenthsMph > 0 ->
+            (distanceM / (speedTenthsMph / 10.0 * Units.METERS_PER_MILE / 3600)).toInt().coerceAtLeast(1)
+        else -> 0
+    }
+}
 
 /** Personal details (for zones and calories) and app preferences. */
 data class UserSettings(

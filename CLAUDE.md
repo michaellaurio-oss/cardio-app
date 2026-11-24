@@ -56,8 +56,9 @@ He is the only user. Explain build and install steps plainly; he is not a day-to
   `WorkoutUi.machine` / VM `machine` mean that (renamed from `rowing`). `Units` gives miles and pace per mile for
   RUN, meters and /500 m for ROW; `Session.pace()`/`avgPace`/`paceUnit` (was pace500). `RowerManager(kind =
   TREADMILL)` (`vm.treadmill`) reads FTMS Treadmill Data 0x2ACD (speed, distance, incline, power) with its own
-  saved address; untested on real hardware (Michael's treadmill brand unknown). Timed run intervals without a
-  treadmill estimate meters from the set speed. `RowingTrendsScreen(activity=…)` and `RowerTestScreen(treadmill=…)`
+  saved address; never tested, and Michael's treadmill has NO Bluetooth, so the Walk/Run screen hides the
+  treadmill card and test (code kept). HR is what matters for walk/run. `WorkoutConfig.clockEndSec`: run intervals
+  end on the clock, by time or distance ÷ set speed; meters/pace come from the set speed. `RowingTrendsScreen(activity=…)` and `RowerTestScreen(treadmill=…)`
   serve both machines.
 - Rowing analytics: `RowingTrendsScreen` (Screen.ROW_TRENDS), grouped by interval kind (same distance or same time). Verdict = latest vs
   average of the previous 3, under 2% = "about the same". Power per heartbeat = `avgWatts / avgHr`.

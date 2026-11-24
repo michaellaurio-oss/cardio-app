@@ -18,7 +18,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -27,7 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.laurio.slamlog.ble.HeartRateManager.State
-import com.laurio.slamlog.ble.RowerManager
 import com.laurio.slamlog.data.Session
 import com.laurio.slamlog.workout.WorkoutViewModel
 import com.laurio.slamlog.workout.mmss
@@ -45,7 +43,6 @@ fun RunScreen(
     onStart: () -> Unit,
     onOpen: (Session) -> Unit,
     onHistory: () -> Unit,
-    onTreadmillTest: () -> Unit,
     onTrends: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -55,15 +52,6 @@ fun RunScreen(
     val state by vm.hr.state.collectAsState()
     val bpm by vm.hr.heartRate.collectAsState()
     val runs = sessions.filter { it.isRun }
-    val tm = vm.treadmill
-    val tState by tm.state.collectAsState()
-    val tName by tm.name.collectAsState()
-    val tDevices by tm.devices.collectAsState()
-    val tError by tm.error.collectAsState()
-    val tData by tm.data.collectAsState()
-    val tmOn = tState == RowerManager.State.CONNECTED
-    // Reconnect to the saved treadmill whenever this screen opens.
-    LaunchedEffect(Unit) { tm.reconnect() }
     fun set(change: (com.laurio.slamlog.data.UserSettings) -> com.laurio.slamlog.data.UserSettings) = vm.updateSettings(change(s))
     val distText = "%.2f mi".format(s.runDistanceHundredthsMi / 100.0)
     val each = if (s.runByTime) mmss(s.runIntervalSec) else distText
@@ -86,49 +74,6 @@ fun RunScreen(
             else "Heart rate isn't connected. Go Back to connect your strap.",
             color = if (state == State.CONNECTED) Mint else MaterialTheme.colorScheme.error,
         )
-
-        SectionCard {
-            Label("Treadmill (optional)")
-            Text(
-                when (tState) {
-                    RowerManager.State.CONNECTED -> "Connected · ${tName ?: "treadmill"}" +
-                        (tData?.speedKmh?.let { " · %.1f mph".format(it / 1.609344) } ?: "")
-                    RowerManager.State.CONNECTING -> "Connecting to ${tName ?: "the treadmill"}…"
-                    RowerManager.State.SCANNING -> "Searching for treadmills…"
-                    RowerManager.State.IDLE -> if (tm.hasSavedRower) "Not connected" else "No treadmill paired"
-                },
-                color = if (tmOn) Mint else MaterialTheme.colorScheme.onSurface,
-            )
-            tError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                when (tState) {
-                    RowerManager.State.CONNECTED, RowerManager.State.CONNECTING ->
-                        OutlinedButton(onClick = { tm.disconnect() }) { Text("Disconnect") }
-                    RowerManager.State.SCANNING ->
-                        OutlinedButton(onClick = { tm.stopScan() }) { Text("Stop searching") }
-                    RowerManager.State.IDLE -> {
-                        Button(onClick = { tm.startScan() }) { Text("Find treadmill") }
-                        if (tm.hasSavedRower) OutlinedButton(onClick = { tm.reconnect() }) { Text("Reconnect") }
-                    }
-                }
-            }
-            if (tState == RowerManager.State.SCANNING || (tState == RowerManager.State.IDLE && tDevices.isNotEmpty())) {
-                tDevices.forEach { d ->
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(d.name, Modifier.weight(1f))
-                        TextButton(onClick = { tm.connect(d) }) { Text("Connect") }
-                    }
-                }
-            }
-            Text(
-                if (tmOn) "The treadmill's distance and speed are recorded" +
-                    (if (s.runByTime) "." else ", and each interval ends by itself at $distText.")
-                else "Works without it: by time, intervals end on the clock; by distance, tap INTERVAL DONE. " +
-                    "A treadmill with Bluetooth fitness-machine support adds real distance and speed.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
 
         SectionCard {
             Label("Run intervals")
@@ -173,8 +118,10 @@ fun RunScreen(
                     onPlus = { set { it.copy(runRestSec = (it.runRestSec + 15).coerceAtMost(600)) } })
             }
             Text(
-                "Speed and incline are what you set on the treadmill for the run intervals; they're saved with the " +
-                    "workout. The end of each run starts the walk and the clock to ${s.runTargetHr} bpm.",
+                "Set speed and incline to what you use on the treadmill; they're saved with the workout. " +
+                    (if (s.runByTime) "Each run ends on the clock."
+                    else "Each run ends when $distText at that speed is up: ${mmss((s.runDistanceHundredthsMi / 100.0 / (s.runSpeedTenthsMph / 10.0) * 3600).toInt())}.") +
+                    " Then walk until you're down to ${s.runTargetHr} bpm.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -204,9 +151,6 @@ fun RunScreen(
                 Text(if (runs.isEmpty()) "History" else "History (${runs.size})")
             }
             OutlinedButton(onClick = onTrends, modifier = Modifier.weight(1f)) { Text("Trends") }
-        }
-        TextButton(onClick = onTreadmillTest, modifier = Modifier.fillMaxWidth()) {
-            Text("Treadmill test: check what it sends over Bluetooth")
         }
         Spacer(Modifier.height(8.dp))
     }
