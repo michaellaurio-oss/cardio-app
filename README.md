@@ -90,6 +90,23 @@ the Slam Ball and Rowing screens rather than the first screen.
 - **About you** (birthday, weight, max HR, heart rate warning) is on the first screen, since it applies
   to both workouts.
 
+## Walk / Run (treadmill)
+
+The third workout on the first screen: run intervals on a treadmill, walking between them until your
+heart rate comes back down.
+
+- Intervals by **time** (default 2:00, 30-second steps) or **distance** (default 0.25 mi, 0.05 mi
+  steps). Set **speed** (mph) and **incline** to what you use on the treadmill; they're saved with the
+  workout. Walk/run has its own recovery target and walk (rest) settings.
+- The end of each run interval rings the bell, says your pace per mile, and starts the walk and the
+  clock to your recovery target, the same as rowing and slam ball.
+- **Treadmill connection (optional):** treadmills that support the standard Bluetooth fitness-machine
+  service send speed and distance; then distance intervals end by themselves and real distance and
+  pace are recorded. Without it, timed intervals still end on the clock (distance worked out from
+  the speed you set) and distance intervals end with INTERVAL DONE. **Treadmill test** at the bottom
+  of the screen shows what your treadmill sends.
+- Its own History and Trends (pace per mile, recovery to target, miles per week, bests).
+
 ## Everything else
 
 - **Rep-based sets**: choose sets, reps per set, rest and ball weight. The set ends itself at the target.

@@ -33,6 +33,7 @@ fun StartScreen(
     onRequestPermissions: () -> Unit,
     onSlamBall: () -> Unit,
     onRowing: () -> Unit,
+    onRun: () -> Unit,
     onAboutYou: () -> Unit,
 ) {
     val settings by vm.settings.collectAsState()
@@ -63,6 +64,7 @@ fun StartScreen(
         Label("Choose a workout")
         WorkoutChoice("SLAM BALL", "Sets of slams, counted by the mic", Orange, onSlamBall)
         WorkoutChoice("ROWING MACHINE", "Intervals with rest until your heart rate recovers", Sky, onRowing)
+        WorkoutChoice("WALK / RUN", "Treadmill run intervals, walking until your heart rate recovers", Mint, onRun)
 
         // About you: birthday, weight, max HR and the heart rate warning, shared by both workouts.
         SectionCard(Modifier.clickable(onClick = onAboutYou)) {

@@ -191,7 +191,7 @@ fun RowingScreen(
                     val toTarget = target?.let { r.avgTimeToTarget(it) }
                     Column(Modifier.fillMaxWidth().clickable { onOpen(r) }.padding(vertical = 4.dp)) {
                         Text("${rowDay.format(Date(r.startMillis))} · ${r.shape}", fontWeight = FontWeight.SemiBold)
-                        val pace = r.avgPace500?.let { "${mmss(it.roundToInt())} /500 m" } ?: "—"
+                        val pace = r.avgPace?.let { "${mmss(it.roundToInt())} /500 m" } ?: "—"
                         val rec = if (toTarget != null) " · to $target in ${mmss(toTarget.roundToInt())} avg" else ""
                         Text("$pace$rec", style = MaterialTheme.typography.bodySmall, color = Sky)
                     }

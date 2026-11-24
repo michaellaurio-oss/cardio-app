@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.laurio.slamlog.data.Session
+import com.laurio.slamlog.data.Units
 import com.laurio.slamlog.workout.mmss
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -44,7 +45,9 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
     val target = session.sets.firstOrNull { it.targetHr > 0 }?.targetHr ?: 0
     val measured = session.setsWithTarget(target)
     val times = measured.mapNotNull { it.timeToTargetSec }
-    val row = session.isRow
+    // "row" here means any machine workout (rowing or walk/run): intervals instead of slam sets.
+    val row = session.isMachine
+    val run = session.isRun
     val unit = if (row) "interval" else "set"
 
     Column(
@@ -55,10 +58,10 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Column {
-            Text(if (row) "ROWING" else "WORKOUT", fontSize = 26.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+            Text(if (run) "WALK / RUN" else if (row) "ROWING" else "WORKOUT", fontSize = 26.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
             Text(dateFmt.format(Date(session.startMillis)), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                (if (row) "Rowing · " else if (session.baseline) "Baseline test · " else "Training · ") + session.shape +
+                (if (run) "Walk/run · " else if (row) "Rowing · " else if (session.baseline) "Baseline test · " else "Training · ") + session.shape +
                     if (!session.completed) " · ended early" else "",
                 color = if (session.baseline) Sky else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold,
@@ -101,13 +104,15 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
 
         if (row) SectionCard {
             Row {
-                Stat("meters", "%,d".format(session.totalMeters), Modifier.weight(1f), color = Orange)
+                if (run) Stat("miles", "%.2f".format(session.totalMeters / Units.METERS_PER_MILE), Modifier.weight(1f), color = Orange)
+                else Stat("meters", "%,d".format(session.totalMeters), Modifier.weight(1f), color = Orange)
                 Stat("intervals", "${session.sets.size}", Modifier.weight(1f))
                 Stat("time", mmss(session.durationSec), Modifier.weight(1f))
             }
             Row {
-                Stat("avg pace", session.avgPace500?.let { "${mmss(it.roundToInt())}/500" } ?: "—", Modifier.weight(1f), color = Sky)
-                Stat("resistance", if (session.resistance > 0) "${session.resistance}" else "—", Modifier.weight(1f))
+                Stat("avg pace", session.avgPace?.let { "${mmss(it.roundToInt())}${if (run) "/mi" else "/500"}" } ?: "—", Modifier.weight(1f), color = Sky)
+                if (run) Stat("mph · incline", if (session.speedTenthsMph > 0) "%.1f · %.1f%%".format(session.speedTenthsMph / 10.0, session.inclineTenths / 10.0) else "—", Modifier.weight(1f))
+                else Stat("resistance", if (session.resistance > 0) "${session.resistance}" else "—", Modifier.weight(1f))
                 Stat("calories", if (hasHr) "${session.calories.roundToInt()}" else "—", Modifier.weight(1f))
             }
             if (session.avgSpm != null || session.avgWatts != null) {
@@ -170,7 +175,7 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
                 Row {
                     Cell("${s.number}", 0.6f)
                     if (row) {
-                        Cell(session.pace500(s)?.let { mmss(it.roundToInt()) } ?: "—", 1f)
+                        Cell(session.pace(s)?.let { mmss(it.roundToInt()) } ?: "—", 1f)
                         if (session.avgSpm != null) Cell(if (s.avgSpm > 0) "${s.avgSpm.roundToInt()}" else "—", 0.7f)
                     } else Cell("${s.reps}", 0.8f)
                     Cell(mmss(s.durationSec), 1f)
@@ -183,7 +188,7 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
             }
             if (hasHr) {
                 Text(
-                    (if (row) "Pace: time per 500 m. To $target: time from the end of the interval until heart rate fell to $target. "
+                    (if (row) "Pace: time per ${if (run) "mile" else "500 m"}. To $target: time from the end of the interval until heart rate fell to $target. "
                     else "To $target: time from the last slam of the set until heart rate fell to $target. ") +
                         "1-min ↓: how far heart rate dropped in the first minute (or over a shorter rest). " +
                         "Faster times and bigger drops mean better conditioning.",

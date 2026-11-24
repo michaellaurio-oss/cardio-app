@@ -31,7 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.laurio.slamlog.data.Activity
 import com.laurio.slamlog.data.Session
+import com.laurio.slamlog.data.Units
 import com.laurio.slamlog.workout.mmss
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -46,7 +48,7 @@ private val weekLabel = SimpleDateFormat("MMM d", Locale.US)
 /** (by time?, seconds or meters): which workouts are comparable. */
 private fun Session.intervalKind(): Pair<Boolean, Int> = if (intervalSec > 0) true to intervalSec else false to distanceM
 
-private fun kindLabel(k: Pair<Boolean, Int>) = if (k.first) mmss(k.second) else "${k.second} m"
+private fun kindLabel(a: Activity, k: Pair<Boolean, Int>) = if (k.first) mmss(k.second) else Units.distance(a, k.second)
 
 /** The recovery target a rowing workout used (each interval records it). */
 private fun Session.rowTarget(): Int? = sets.firstOrNull { it.targetHr > 0 }?.targetHr
@@ -59,7 +61,7 @@ private fun Session.wattsPerBeat(): Double? {
     return if (avgHr > 0) w / avgHr else null
 }
 
-private fun Session.bestPace(): Double? = sets.mapNotNull { pace500(it) }.minOrNull()
+private fun Session.bestPace(): Double? = sets.mapNotNull { pace(it) }.minOrNull()
 
 /**
  * "How is my rowing going?": recovery to target, pace, power per heartbeat and stroke rate over time,
@@ -67,34 +69,43 @@ private fun Session.bestPace(): Double? = sets.mapNotNull { pace500(it) }.minOrN
  * interval distance, since a 250 m and a 1,000 m piece aren't comparable.
  */
 @Composable
-fun RowingTrendsScreen(sessions: List<Session>, onOpen: (Session) -> Unit, onBack: () -> Unit) {
+fun RowingTrendsScreen(
+    sessions: List<Session>,
+    onOpen: (Session) -> Unit,
+    onBack: () -> Unit,
+    /** Rowing, or walk/run (same screen, miles and pace per mile). */
+    activity: Activity = Activity.ROW,
+) {
+    val run = activity == Activity.RUN
+    val unitPace = Units.paceLabel(activity)
+    fun dist(m: Int) = Units.distance(activity, m)
     BackHandler(onBack = onBack)
-    val rows = sessions.filter { it.isRow && it.sets.isNotEmpty() }.sortedBy { it.startMillis }
+    val rows = sessions.filter { it.activity == activity && it.sets.isNotEmpty() }.sortedBy { it.startMillis }
     // Workouts compare only with the same kind of interval: same distance, or same time.
     val kinds = rows.map { it.intervalKind() }.distinct().sortedWith(compareBy({ it.first }, { it.second }))
     var kind by remember { mutableStateOf(rows.lastOrNull()?.intervalKind() ?: (false to 0)) }
     val group = rows.filter { it.intervalKind() == kind }
-    val kindLabel = kindLabel(kind)
+    val kindLabel = kindLabel(activity, kind)
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("ROWING TRENDS", fontSize = 28.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary,
+            Text(if (run) "WALK/RUN TRENDS" else "ROWING TRENDS", fontSize = 28.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f))
             TextButton(onClick = onBack) { Text("Back") }
         }
 
         if (rows.isEmpty()) {
-            Text("No rowing workouts yet. Trends show up after your first one.")
+            Text("No ${if (run) "walk/run" else "rowing"} workouts yet. Trends show up after your first one.")
             return@Column
         }
 
         if (kinds.size > 1) {
             Label("Compare intervals of")
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                kinds.forEach { k -> Choice(kindLabel(k), k == kind) { kind = k } }
+                kinds.forEach { k -> Choice(kindLabel(activity, k), k == kind) { kind = k } }
             }
         }
         Text(
@@ -118,10 +129,10 @@ fun RowingTrendsScreen(sessions: List<Session>, onOpen: (Session) -> Unit, onBac
         }
 
         // ---- Pace ----
-        val pace = group.mapNotNull { s -> s.avgPace500?.let { s.startMillis to it.toFloat() } }
+        val pace = group.mapNotNull { s -> s.avgPace?.let { s.startMillis to it.toFloat() } }
         val best = group.mapNotNull { s -> s.bestPace()?.let { s.startMillis to it.toFloat() } }
         if (pace.isNotEmpty()) SectionCard {
-            Label("Pace per 500 m")
+            Label(if (run) "Pace per mile" else "Pace per 500 m")
             Verdict(pace.map { it.second.toDouble() }, lowerIsBetter = true) { mmss(it.roundToInt()) }
             TrendChart(pace, Orange, { mmss(it.roundToInt()) }, secondary = best, secondaryColor = Sky)
             Legend(listOf(Orange to "average", Sky to "best interval"))
@@ -143,9 +154,9 @@ fun RowingTrendsScreen(sessions: List<Session>, onOpen: (Session) -> Unit, onBac
         if (spm.isNotEmpty()) SectionCard {
             Label("Stroke rate")
             TrendChart(spm, MaterialTheme.colorScheme.onSurface, { "${it.roundToInt()} spm" })
-            val p = group.lastOrNull { it.avgSpm != null && it.avgPace500 != null }
+            val p = group.lastOrNull { it.avgSpm != null && it.avgPace != null }
             if (p != null) {
-                Text("Latest: ${p.avgSpm!!.roundToInt()} strokes/min at ${mmss(p.avgPace500!!.roundToInt())} /500 m. " +
+                Text("Latest: ${p.avgSpm!!.roundToInt()} strokes/min at ${mmss(p.avgPace!!.roundToInt())} $unitPace. " +
                     "The same pace at a lower stroke rate means more power per stroke.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -166,7 +177,7 @@ fun RowingTrendsScreen(sessions: List<Session>, onOpen: (Session) -> Unit, onBac
 
         // ---- Weekly meters (all distances) ----
         SectionCard {
-            Label("Meters per week")
+            Label(if (run) "Miles per week" else "Meters per week")
             val weeks = weeklyMeters(rows, 8)
             val top = (weeks.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
             weeks.forEach { (start, m) ->
@@ -178,7 +189,7 @@ fun RowingTrendsScreen(sessions: List<Session>, onOpen: (Session) -> Unit, onBac
                                 .background(Orange, RoundedCornerShape(4.dp)),
                         )
                     }
-                    Text(if (m > 0) "%,d".format(m) else "—", Modifier.width(64.dp).padding(start = 8.dp),
+                    Text(if (m > 0) dist(m) else "—", Modifier.width(72.dp).padding(start = 8.dp),
                         style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -187,16 +198,16 @@ fun RowingTrendsScreen(sessions: List<Session>, onOpen: (Session) -> Unit, onBac
         // ---- Bests ----
         SectionCard {
             Label("Bests")
-            val bestPace = rows.flatMap { s -> s.sets.mapNotNull { set -> s.pace500(set)?.let { Triple(it, s, set) } } }
+            val bestPace = rows.flatMap { s -> s.sets.mapNotNull { set -> s.pace(set)?.let { Triple(it, s, set) } } }
                 .filter { it.second.intervalKind() == kind }.minByOrNull { it.first }
-            bestPace?.let { (p, s, _) -> BestLine("Fastest $kindLabel interval", "${mmss(p.roundToInt())} /500 m", s, onOpen) }
+            bestPace?.let { (p, s, _) -> BestLine("Fastest $kindLabel interval", "${mmss(p.roundToInt())} $unitPace", s, onOpen) }
             val fastestRec = group.mapNotNull { s -> s.rowToTarget()?.let { it to s } }.minByOrNull { it.first }
             fastestRec?.let { (v, s) -> BestLine("Quickest average recovery", secs(v), s, onOpen) }
             val bestWpb = group.mapNotNull { s -> s.wattsPerBeat()?.let { it to s } }.maxByOrNull { it.first }
             bestWpb?.let { (v, s) -> BestLine("Most power per heartbeat", "%.2f W/bpm".format(v), s, onOpen) }
             val most = rows.maxByOrNull { it.totalMeters }
-            most?.let { BestLine("Most meters in a workout", "%,d m".format(it.totalMeters), it, onOpen) }
-            Text("Total rowed: %,d m in %d workouts.".format(rows.sumOf { it.totalMeters }, rows.size),
+            most?.let { BestLine("Farthest workout", dist(it.totalMeters), it, onOpen) }
+            Text("Total: ${dist(rows.sumOf { it.totalMeters })} in ${rows.size} workouts.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(8.dp))

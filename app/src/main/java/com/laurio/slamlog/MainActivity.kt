@@ -34,6 +34,8 @@ import com.laurio.slamlog.ui.HomeScreen
 import com.laurio.slamlog.ui.RowerTestScreen
 import com.laurio.slamlog.ui.RowingScreen
 import com.laurio.slamlog.ui.RowingTrendsScreen
+import com.laurio.slamlog.ui.RunScreen
+import com.laurio.slamlog.data.Activity
 import com.laurio.slamlog.ui.StartScreen
 import com.laurio.slamlog.ui.SettingsScreen
 import com.laurio.slamlog.ui.SlamTheme
@@ -59,7 +61,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /** START is the first screen (strap + workout choice); HOME is the Slam Ball screen. */
-private enum class Screen { START, HOME, ROWING, ROWER_TEST, ROW_TRENDS, WORKOUT, SUMMARY, HISTORY, TRENDS, SETTINGS, ABOUT_YOU, BASELINE, BASELINE_SETTINGS }
+private enum class Screen { START, HOME, ROWING, RUN, ROWER_TEST, ROW_TRENDS, WORKOUT, SUMMARY, HISTORY, TRENDS, SETTINGS, ABOUT_YOU, BASELINE, BASELINE_SETTINGS }
 
 private fun neededPermissions(): Array<String> = buildList {
     if (Build.VERSION.SDK_INT >= 31) {
@@ -82,6 +84,8 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
     var summaryBack by rememberSaveable { mutableStateOf(Screen.HOME) }
     var workoutFrom by rememberSaveable { mutableStateOf(Screen.HOME) }
     var rowTrendsBack by rememberSaveable { mutableStateOf(Screen.ROWING) }
+    // Rowing and Walk/Run share the trends and Bluetooth test screens.
+    var machineActivity by rememberSaveable { mutableStateOf(Activity.ROW) }
     // Where Trends' Back goes (Home, or Baseline when opened from there).
     var trendsBack by rememberSaveable { mutableStateOf(Screen.HOME) }
     // Where About you's Back goes (it's only opened from the first screen now).
@@ -130,6 +134,7 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onRequestPermissions = requestPermissions,
                 onSlamBall = { screen = Screen.HOME },
                 onRowing = { screen = Screen.ROWING },
+                onRun = { screen = Screen.RUN },
                 onAboutYou = { aboutBack = Screen.START; screen = Screen.ABOUT_YOU },
             )
             Screen.HOME -> HomeScreen(
@@ -147,15 +152,28 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onStart = { workoutFrom = Screen.ROWING; vm.startRowing(); screen = Screen.WORKOUT },
                 onOpen = { shown = it; summaryBack = Screen.ROWING; screen = Screen.SUMMARY },
                 onHistory = { historyBack = Screen.ROWING; screen = Screen.HISTORY },
-                onRowerTest = { screen = Screen.ROWER_TEST },
-                onTrends = { rowTrendsBack = Screen.ROWING; screen = Screen.ROW_TRENDS },
+                onRowerTest = { machineActivity = Activity.ROW; screen = Screen.ROWER_TEST },
+                onTrends = { machineActivity = Activity.ROW; rowTrendsBack = Screen.ROWING; screen = Screen.ROW_TRENDS },
                 onBack = { screen = Screen.START },
             )
-            Screen.ROWER_TEST -> RowerTestScreen(vm, onBack = { screen = Screen.ROWING })
+            Screen.RUN -> RunScreen(
+                vm = vm,
+                onStart = { workoutFrom = Screen.RUN; vm.startRun(); screen = Screen.WORKOUT },
+                onOpen = { shown = it; summaryBack = Screen.RUN; screen = Screen.SUMMARY },
+                onHistory = { historyBack = Screen.RUN; screen = Screen.HISTORY },
+                onTreadmillTest = { machineActivity = Activity.RUN; screen = Screen.ROWER_TEST },
+                onTrends = { machineActivity = Activity.RUN; rowTrendsBack = Screen.RUN; screen = Screen.ROW_TRENDS },
+                onBack = { screen = Screen.START },
+            )
+            Screen.ROWER_TEST -> {
+                val tread = machineActivity == Activity.RUN
+                RowerTestScreen(vm, onBack = { screen = if (tread) Screen.RUN else Screen.ROWING }, treadmill = tread)
+            }
             Screen.ROW_TRENDS -> RowingTrendsScreen(
                 sessions = sessions,
                 onOpen = { shown = it; summaryBack = Screen.ROW_TRENDS; screen = Screen.SUMMARY },
                 onBack = { screen = rowTrendsBack },
+                activity = machineActivity,
             )
             Screen.WORKOUT -> WorkoutScreen(vm)
             Screen.SUMMARY -> {
@@ -175,22 +193,22 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 }
             }
             Screen.HISTORY -> {
-                // Each workout has its own history: opened from Rowing, rowing only; otherwise slam ball.
-                val rowing = historyBack == Screen.ROWING
-                val list = sessions.filter { it.isRow == rowing }
+                // Each workout has its own history, picked by the screen History was opened from.
+                val act = when (historyBack) { Screen.ROWING -> Activity.ROW; Screen.RUN -> Activity.RUN; else -> Activity.SLAM }
+                val list = sessions.filter { it.activity == act }
                 HistoryScreen(
                     sessions = list,
                     onOpen = { shown = it; summaryBack = Screen.HISTORY; screen = Screen.SUMMARY },
-                    onTrends = if (rowing) ({ rowTrendsBack = Screen.HISTORY; screen = Screen.ROW_TRENDS })
+                    onTrends = if (act.isMachine) ({ machineActivity = act; rowTrendsBack = Screen.HISTORY; screen = Screen.ROW_TRENDS })
                     else ({ trendsBack = Screen.HISTORY; screen = Screen.TRENDS }),
                     onExport = { vm.exportCsvFile(list) },
-                    title = if (rowing) "ROWING HISTORY" else "SLAM BALL HISTORY",
+                    title = when (act) { Activity.ROW -> "ROWING HISTORY"; Activity.RUN -> "WALK/RUN HISTORY"; Activity.SLAM -> "SLAM BALL HISTORY" },
                     onBack = { screen = historyBack },
                 )
             }
             Screen.TRENDS -> TrendsScreen(
-                // Slam ball trends only; rowing has its own list on the Rowing screen.
-                sessions = sessions.filter { !it.isRow },
+                // Slam ball trends only; rowing and walk/run have their own trends screen.
+                sessions = sessions.filter { it.activity == Activity.SLAM },
                 settings = settings,
                 target = settings.recoveryTargetHr,
                 onOpen = { shown = it; summaryBack = Screen.TRENDS; screen = Screen.SUMMARY },

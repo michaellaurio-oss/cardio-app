@@ -18,6 +18,7 @@ import com.laurio.slamlog.ble.RowerManager
 import com.laurio.slamlog.ble.RowerProbe
 import com.laurio.slamlog.data.Activity
 import com.laurio.slamlog.data.Session
+import com.laurio.slamlog.data.Units
 import com.laurio.slamlog.data.SessionStore
 import com.laurio.slamlog.data.SetResult
 import com.laurio.slamlog.data.SettingsStore
@@ -61,7 +62,11 @@ data class WorkoutUi(
     val holding: Boolean = false,
     val baseline: Boolean = false,
     /** Rowing: intervals end with the "Interval done" button instead of reps. */
-    val rowing: Boolean = false,
+    /** Rowing or walk/run: intervals end by distance, time or the button instead of reps. */
+    val machine: Boolean = false,
+    val activity: Activity = Activity.SLAM,
+    /** Walk/run: live treadmill speed in mph. */
+    val speedMph: Double? = null,
     val distanceM: Int = 0,
     val resistance: Int = 0,
     /** Rowing by time: seconds per interval (0 = by distance). */
@@ -90,6 +95,13 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     val rower = RowerProbe(app)
     /** The rowing machine itself (FTMS): ends intervals at their distance and records pace, strokes, watts. */
     val rowMachine = RowerManager(app, settingsStore)
+    /** The treadmill (FTMS Treadmill Data): speed, distance; ends distance intervals by itself. */
+    val treadmill = RowerManager(app, settingsStore, RowerManager.Kind.TREADMILL)
+
+    /** The machine the current workout uses. */
+    private val activeMachine: RowerManager get() = if (cfg.activity == Activity.RUN) treadmill else rowMachine
+
+    private fun machineConnected() = activeMachine.state.value == RowerManager.State.CONNECTED
     private val speaker = Speaker(app).also { it.voiceEnabled = _settings.value.voice }
     private val detector = SlamDetector(
         onSlam = { main.post { onSlam() } },
@@ -146,7 +158,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     private val wattSamples = ArrayList<Int>()
 
     init {
-        viewModelScope.launch { rowMachine.data.collect { d -> if (d != null) onRowerData(d) } }
+        viewModelScope.launch { rowMachine.data.collect { d -> if (d != null && cfg.activity == Activity.ROW) onRowerData(d) } }
+        viewModelScope.launch { treadmill.data.collect { d -> if (d != null && cfg.activity == Activity.RUN) onRowerData(d) } }
     }
 
     /**
@@ -160,14 +173,17 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         lastRowDist = d.distanceM
         lastRowStrokes = d.strokes
         val u = _ui.value
-        if (!rowing || u.phase != Phase.WORK) return
+        if (!machine || u.phase != Phase.WORK) return
         val dist = d.distanceM
         if (dist != null && prevDist != null && dist >= prevDist && dist - prevDist <= 100) intervalMeters += dist - prevDist
         val st = d.strokes
         if (st != null && prevStrokes != null && st >= prevStrokes && st - prevStrokes <= 10) intervalStrokes += st - prevStrokes
         d.strokeRate?.takeIf { it > 0 }?.let { spmSamples += it }
         d.watts?.takeIf { it > 0 }?.let { wattSamples += it }
-        _ui.value = u.copy(rowMeters = intervalMeters, rowLive = true, spm = d.strokeRate, paceSec = d.paceSec, watts = d.watts)
+        val mph = d.speedKmh?.let { it / 1.609344 }
+        // Walk/run pace is per mile, from the belt speed.
+        val pace = if (cfg.activity == Activity.RUN) mph?.takeIf { it > 0.5 }?.let { (3600 / it).roundToInt() } else d.paceSec
+        _ui.value = u.copy(rowMeters = intervalMeters, rowLive = true, spm = d.strokeRate, paceSec = pace, watts = d.watts, speedMph = mph)
         if (cfg.distanceM > 0 && intervalMeters >= cfg.distanceM) endSet()
     }
 
@@ -279,7 +295,30 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
-    private val rowing get() = cfg.activity == Activity.ROW
+    /** Start a walk/run workout with the intervals set on the Walk/Run screen. */
+    fun startRun() {
+        treadmill.reconnect()
+        val s = _settings.value
+        startWorkout(
+            WorkoutConfig(
+                sets = s.runIntervals,
+                targetReps = 0,
+                restSec = s.runRestSec,
+                ballWeightLbs = 0,
+                autoCount = false,
+                restUntilTarget = s.runRestUntilTarget,
+                minRestSec = s.runMinRestSec,
+                targetHr = s.runTargetHr,
+                activity = Activity.RUN,
+                distanceM = if (s.runByTime) 0 else (s.runDistanceHundredthsMi * Units.METERS_PER_MILE / 100).roundToInt(),
+                intervalSec = if (s.runByTime) s.runIntervalSec else 0,
+                speedTenthsMph = s.runSpeedTenthsMph,
+                inclineTenths = s.runInclineTenths,
+            ),
+        )
+    }
+
+    private val machine get() = cfg.activity.isMachine
 
     private var isBaseline = false
 
@@ -316,13 +355,14 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             targetReps = cfg.targetReps,
             secondsLeft = GET_READY_SEC,
             baseline = baseline,
-            rowing = rowing,
+            machine = machine,
+            activity = cfg.activity,
             distanceM = cfg.distanceM,
             resistance = cfg.resistance,
             intervalSec = cfg.intervalSec,
         )
-        if (rowing) {
-            val each = if (cfg.intervalSec > 0) spokenTime(cfg.intervalSec) else "${cfg.distanceM} meters"
+        if (machine) {
+            val each = if (cfg.intervalSec > 0) spokenTime(cfg.intervalSec) else Units.spokenDistance(cfg.activity, cfg.distanceM)
             speaker.say("Get ready. ${cfg.sets} intervals of $each.", interrupt = true)
         } else {
             speaker.say("Get ready${if (baseline) " for your baseline test" else ""}. ${cfg.sets} sets of ${cfg.targetReps}.", interrupt = true)
@@ -350,15 +390,15 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     private fun statusText(u: WorkoutUi): String = when (u.phase) {
         Phase.GET_READY -> "Get ready · ${u.secondsLeft} s"
         Phase.WORK ->
-            if (u.rowing) "Interval ${u.setNumber} of ${u.totalSets} · " + when {
+            if (u.machine) "Interval ${u.setNumber} of ${u.totalSets} · " + when {
                 u.intervalSec > 0 -> "${mmss((u.intervalSec - u.setElapsedSec).coerceAtLeast(0))} left"
-                u.rowLive -> "${u.rowMeters}/${u.distanceM} m"
+                u.rowLive -> "${Units.distance(u.activity, u.rowMeters)} of ${Units.distance(u.activity, u.distanceM)}"
                 else -> mmss(u.setElapsedSec)
             }
             else "Set ${u.setNumber} of ${u.totalSets} · ${u.reps}/${u.targetReps} reps"
         Phase.REST ->
-            if (u.holding) "Rest · waiting for ${u.targetHr} bpm · ${mmss(u.sinceSlamSec)} since ${if (u.rowing) "the interval" else "last slam"}"
-            else "Rest · ${mmss(u.secondsLeft)} · next: ${if (u.rowing) "interval" else "set"} ${u.setNumber + 1} of ${u.totalSets}"
+            if (u.holding) "Rest · waiting for ${u.targetHr} bpm · ${mmss(u.sinceSlamSec)} since ${if (u.machine) "the interval" else "last slam"}"
+            else "Rest · ${mmss(u.secondsLeft)} · next: ${if (u.machine) "interval" else "set"} ${u.setNumber + 1} of ${u.totalSets}"
         Phase.RECOVERY -> "Recovery check · stand still"
         else -> "Workout in progress"
     }
@@ -429,10 +469,10 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
                 val elapsed = u.setElapsedSec + 1
                 _ui.value = base.copy(
                     setElapsedSec = elapsed,
-                    rowLive = rowing && rowMachine.state.value == RowerManager.State.CONNECTED,
+                    rowLive = machine && machineConnected(),
                 )
                 // Rowing by time: 3-2-1 beeps, then the interval ends by itself.
-                if (rowing && cfg.intervalSec > 0) {
+                if (machine && cfg.intervalSec > 0) {
                     val left = cfg.intervalSec - elapsed
                     if (left in 1..3) speaker.beepShort()
                     if (left <= 0) endSet()
@@ -498,9 +538,10 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         _ui.value = u.copy(
             phase = Phase.WORK,
             rowMeters = 0,
-            rowLive = rowing && rowMachine.state.value == RowerManager.State.CONNECTED,
+            rowLive = machine && machineConnected(),
             spm = null,
             paceSec = null,
+            speedMph = null,
             watts = null,
             setNumber = number,
             reps = 0,
@@ -516,7 +557,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         setStartedAt = SystemClock.elapsedRealtime()
         detector.armed = cfg.autoCount && detector.isRunning
         speaker.beepLong()
-        val word = if (rowing) "interval" else "set"
+        val word = if (machine) "interval" else "set"
         speaker.say(if (number == cfg.sets && cfg.sets > 1) "Last $word. Go!" else "${word.replaceFirstChar { it.uppercase() }} $number. Go!")
     }
 
@@ -560,10 +601,17 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         avgHr = if (setHr.isEmpty()) 0 else setHr.average().roundToInt(),
         peakHr = setHr.maxOrNull() ?: 0,
         // If the rower dropped partway, its count is short: leave meters at 0 so pace uses the planned distance.
-        meters = if (rowing && (rowMachine.state.value == RowerManager.State.CONNECTED || intervalMeters >= cfg.distanceM)) intervalMeters else 0,
-        strokes = if (rowing) intervalStrokes else 0,
-        avgSpm = if (rowing && spmSamples.isNotEmpty()) spmSamples.average() else 0.0,
-        avgWatts = if (rowing && wattSamples.isNotEmpty()) wattSamples.average().roundToInt() else 0,
+        meters = when {
+            !machine -> 0
+            machineConnected() || (intervalMeters > 0 && intervalMeters >= cfg.distanceM) -> intervalMeters
+            // Walk/run by time without the treadmill: distance from the speed you set.
+            cfg.activity == Activity.RUN && cfg.intervalSec > 0 && cfg.speedTenthsMph > 0 ->
+                (cfg.speedTenthsMph / 10.0 * Units.METERS_PER_MILE / 3600 * u.setElapsedSec).roundToInt()
+            else -> 0
+        },
+        strokes = if (machine) intervalStrokes else 0,
+        avgSpm = if (machine && spmSamples.isNotEmpty()) spmSamples.average() else 0.0,
+        avgWatts = if (machine && wattSamples.isNotEmpty()) wattSamples.average().roundToInt() else 0,
     )
 
     /** Finish the current set (target reached or "End set" tapped). */
@@ -595,9 +643,9 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         )
         // Rowing: the boxing bell marks the end of the interval (it's easy to miss a beep over the fan),
         // and the spoken time and pace wait until it has rung.
-        if (rowing) speaker.threeLeft() else speaker.beepLong()
+        if (machine) speaker.threeLeft() else speaker.beepLong()
         val sayAfterBell: (String) -> Unit = { text ->
-            if (rowing) viewModelScope.launch { delay(Speaker.BELL_MS + 150L); speaker.say(text) } else speaker.say(text)
+            if (machine) viewModelScope.launch { delay(Speaker.BELL_MS + 150L); speaker.say(text) } else speaker.say(text)
         }
         if (u.setNumber >= cfg.sets) {
             _ui.value = common.copy(phase = Phase.RECOVERY, secondsLeft = 60)
@@ -607,10 +655,12 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             val restLen = if (cfg.restUntilTarget) cfg.minRestSec else cfg.restSec
             _ui.value = common.copy(phase = Phase.REST, secondsLeft = restLen, holding = false)
             sayAfterBell(
-                if (rowing && cfg.intervalSec > 0) "Interval ${u.setNumber} done." +
-                    (if (intervalMeters > 0) " $intervalMeters meters, pace ${spokenPace(u.setElapsedSec * 500.0 / intervalMeters)}." else "") + " Rest."
-                else if (rowing) "Interval ${u.setNumber} done in ${spokenTime(u.setElapsedSec)}." +
-                    (if (intervalMeters > 0) " Pace ${spokenPace(u.setElapsedSec * 500.0 / intervalMeters)}." else "") + " Rest."
+                if (machine && cfg.intervalSec > 0) "Interval ${u.setNumber} done." +
+                    (if (intervalMeters > 0) " ${Units.spokenDistance(cfg.activity, intervalMeters)}, pace ${spokenPace(u.setElapsedSec * Units.paceMeters(cfg.activity) / intervalMeters)}." else "") +
+                    (if (cfg.activity == Activity.RUN) " Walk." else " Rest.")
+                else if (machine) "Interval ${u.setNumber} done in ${spokenTime(u.setElapsedSec)}." +
+                    (if (intervalMeters > 0) " Pace ${spokenPace(u.setElapsedSec * Units.paceMeters(cfg.activity) / intervalMeters)}." else "") +
+                    (if (cfg.activity == Activity.RUN) " Walk." else " Rest.")
                 else "Set ${u.setNumber} done. ${u.reps} reps. Rest.",
             )
         }
@@ -739,6 +789,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             distanceM = cfg.distanceM,
             resistance = cfg.resistance,
             intervalSec = cfg.intervalSec,
+            speedTenthsMph = cfg.speedTenthsMph,
+            inclineTenths = cfg.inclineTenths,
         )
         sessionStore.save(session)
         _sessions.value = sessionStore.load()
@@ -750,8 +802,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         val cal = if (valid.isEmpty()) "" else " ${calories.roundToInt()} calories."
         val rec = if (avgToTarget != null) " Average time to $target, ${spokenTime(avgToTarget.roundToInt())}." else ""
         waitingForTarget = false
-        val what = if (rowing && session.totalMeters == 0) "${session.sets.size} intervals."
-        else if (rowing) "${session.totalMeters} meters in ${session.sets.size} intervals."
+        val what = if (machine && session.totalMeters == 0) "${session.sets.size} intervals."
+        else if (machine) "${Units.spokenDistance(cfg.activity, session.totalMeters)} in ${session.sets.size} intervals."
         else "${session.totalReps} slams in ${session.sets.size} sets."
         speaker.say("Done. $what$rec$cal How hard was it? Rate it on screen.", interrupt = true)
     }
@@ -808,6 +860,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         rower.stopScan()
         rower.disconnect()
         rowMachine.release()
+        treadmill.release()
         speaker.shutdown()
     }
 

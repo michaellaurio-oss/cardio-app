@@ -34,6 +34,9 @@ data class RowerData(
     val watts: Int?,
     /** SystemClock.elapsedRealtime() when it arrived. */
     val at: Long,
+    /** Treadmill: belt speed (km/h) and incline (%). */
+    val speedKmh: Double? = null,
+    val inclinePct: Double? = null,
 )
 
 /**
@@ -42,7 +45,21 @@ data class RowerData(
  * Connect App. Saves the rower and reconnects to it, like [HeartRateManager] does for the strap.
  */
 @SuppressLint("MissingPermission") // Permissions are requested in MainActivity; calls are wrapped in try/catch.
-class RowerManager(context: Context, private val store: SettingsStore) {
+class RowerManager(context: Context, private val store: SettingsStore, val kind: Kind = Kind.ROWER) {
+
+    /** Which fitness machine: same Bluetooth service (FTMS), different data characteristic. */
+    enum class Kind { ROWER, TREADMILL }
+
+    private var savedAddress: String?
+        get() = if (kind == Kind.ROWER) store.rowerAddress else store.treadmillAddress
+        set(v) { if (kind == Kind.ROWER) store.rowerAddress = v else store.treadmillAddress = v }
+
+    private var savedName: String?
+        get() = if (kind == Kind.ROWER) store.rowerName else store.treadmillName
+        set(v) { if (kind == Kind.ROWER) store.rowerName = v else store.treadmillName = v }
+
+    private val dataUuid: UUID get() = if (kind == Kind.ROWER) ROWER_DATA else TREADMILL_DATA
+    private val nameHint: Regex get() = if (kind == Kind.ROWER) NAME_HINT else TREADMILL_HINT
 
     enum class State { IDLE, SCANNING, CONNECTING, CONNECTED }
 
@@ -59,7 +76,7 @@ class RowerManager(context: Context, private val store: SettingsStore) {
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
     val devices: StateFlow<List<Device>> = _devices
 
-    private val _name = MutableStateFlow(store.rowerName)
+    private val _name = MutableStateFlow(if (kind == Kind.ROWER) store.rowerName else store.treadmillName)
     val name: StateFlow<String?> = _name
 
     private val _error = MutableStateFlow<String?>(null)
@@ -71,7 +88,7 @@ class RowerManager(context: Context, private val store: SettingsStore) {
     private var gatt: BluetoothGatt? = null
     private var userDisconnected = false
 
-    val hasSavedRower: Boolean get() = store.rowerAddress != null
+    val hasSavedRower: Boolean get() = savedAddress != null
 
     /** Connected and a reading arrived in the last 5 seconds. */
     fun isLive(): Boolean =
@@ -114,11 +131,11 @@ class RowerManager(context: Context, private val store: SettingsStore) {
             val record = result.scanRecord
             val name = record?.deviceName ?: runCatching { result.device.name }.getOrNull()
             val ftms = record?.serviceUuids?.contains(ParcelUuid(FTMS_SERVICE)) == true
-            val looksLikeRower = name != null && NAME_HINT.containsMatchIn(name)
+            val looksLikeRower = name != null && nameHint.containsMatchIn(name)
             if (!ftms && !looksLikeRower) return
             val address = result.device.address
             if (_devices.value.none { it.address == address }) {
-                _devices.value = _devices.value + Device(name ?: "Rowing machine", address)
+                _devices.value = _devices.value + Device(name ?: if (kind == Kind.ROWER) "Rowing machine" else "Treadmill", address)
             }
         }
 
@@ -132,15 +149,15 @@ class RowerManager(context: Context, private val store: SettingsStore) {
 
     fun connect(device: Device) {
         stopScan()
-        store.rowerAddress = device.address
-        store.rowerName = device.name
+        savedAddress = device.address
+        savedName = device.name
         _name.value = device.name
         open(device.address)
     }
 
     /** Connect to the saved rower, if there is one and we aren't connected already. */
     fun reconnect() {
-        val address = store.rowerAddress ?: return
+        val address = savedAddress ?: return
         if (gatt != null || adapter?.isEnabled != true) return
         open(address)
     }
@@ -222,10 +239,10 @@ class RowerManager(context: Context, private val store: SettingsStore) {
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
-            val ch = g.getService(FTMS_SERVICE)?.getCharacteristic(ROWER_DATA)
+            val ch = g.getService(FTMS_SERVICE)?.getCharacteristic(dataUuid)
             if (ch == null) {
                 handler.post {
-                    _error.value = "That device doesn't send rowing data."
+                    _error.value = if (kind == Kind.ROWER) "That device doesn't send rowing data." else "That device doesn't send treadmill data."
                     disconnect()
                 }
                 return
@@ -254,7 +271,7 @@ class RowerManager(context: Context, private val store: SettingsStore) {
 
         // Android 13+
         override fun onCharacteristicChanged(g: BluetoothGatt, ch: BluetoothGattCharacteristic, value: ByteArray) {
-            if (ch.uuid == ROWER_DATA) got(value)
+            if (ch.uuid == dataUuid) got(value)
         }
 
         // Android 12 and older
@@ -262,12 +279,13 @@ class RowerManager(context: Context, private val store: SettingsStore) {
         override fun onCharacteristicChanged(g: BluetoothGatt, ch: BluetoothGattCharacteristic) {
             @Suppress("DEPRECATION")
             val value = ch.value ?: return
-            if (ch.uuid == ROWER_DATA) got(value)
+            if (ch.uuid == dataUuid) got(value)
         }
     }
 
     private fun got(value: ByteArray) {
-        val d = parse(value, SystemClock.elapsedRealtime()) ?: return
+        val now = SystemClock.elapsedRealtime()
+        val d = (if (kind == Kind.ROWER) parse(value, now) else parseTreadmill(value, now)) ?: return
         handler.post {
             _data.value = d
             if (_state.value != State.CONNECTED) _state.value = State.CONNECTED
@@ -278,7 +296,45 @@ class RowerManager(context: Context, private val store: SettingsStore) {
         private val FTMS_SERVICE: UUID = UUID.fromString("00001826-0000-1000-8000-00805f9b34fb")
         private val ROWER_DATA: UUID = UUID.fromString("00002ad1-0000-1000-8000-00805f9b34fb")
         private val CCCD: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+        private val TREADMILL_DATA: UUID = UUID.fromString("00002acd-0000-1000-8000-00805f9b34fb")
         private val NAME_HINT = Regex("rogue|console|row|erg|pm5", RegexOption.IGNORE_CASE)
+        private val TREADMILL_HINT = Regex("tread|run|walk|belt|ftms|horizon|sole|nordic|ifit|proform|bowflex|assault|woodway|life|matrix", RegexOption.IGNORE_CASE)
+
+        /** Decode an FTMS Treadmill Data packet (Bluetooth SIG 0x2ACD); null if it's malformed. */
+        fun parseTreadmill(d: ByteArray, at: Long): RowerData? {
+            if (d.size < 2) return null
+            var i = 2
+            val flags = (d[0].toInt() and 0xff) or ((d[1].toInt() and 0xff) shl 8)
+            fun u8() = (d[i].toInt() and 0xff).also { i += 1 }
+            fun u16() = ((d[i].toInt() and 0xff) or ((d[i + 1].toInt() and 0xff) shl 8)).also { i += 2 }
+            fun s16() = u16().let { if (it >= 0x8000) it - 0x10000 else it }
+            fun u24() = ((d[i].toInt() and 0xff) or ((d[i + 1].toInt() and 0xff) shl 8) or
+                ((d[i + 2].toInt() and 0xff) shl 16)).also { i += 3 }
+            var speed: Double? = null
+            var dist: Int? = null
+            var incline: Double? = null
+            var watts: Int? = null
+            return try {
+                // Bit 0 is inverted: 0 means instantaneous speed is present.
+                if ((flags and 0x0001) == 0) speed = u16() / 100.0
+                if ((flags and 0x0002) != 0) u16() // average speed
+                if ((flags and 0x0004) != 0) dist = u24()
+                if ((flags and 0x0008) != 0) { incline = s16() / 10.0; s16() } // incline %, ramp angle
+                if ((flags and 0x0010) != 0) { u16(); u16() } // elevation gain
+                if ((flags and 0x0020) != 0) u8() // instantaneous pace
+                if ((flags and 0x0040) != 0) u8() // average pace
+                if ((flags and 0x0080) != 0) { u16(); u16(); u8() } // energy
+                if ((flags and 0x0100) != 0) u8() // heart rate
+                if ((flags and 0x0200) != 0) u8() // METs
+                if ((flags and 0x0400) != 0) u16() // elapsed
+                if ((flags and 0x0800) != 0) u16() // remaining
+                if ((flags and 0x1000) != 0) { s16(); watts = s16() } // force on belt, power
+                // Pace per 500 m isn't how runners think: leave it null; the VM works out per-mile pace.
+                RowerData(dist, null, null, null, watts, at, speedKmh = speed, inclinePct = incline)
+            } catch (_: IndexOutOfBoundsException) {
+                null
+            }
+        }
 
         /** Decode an FTMS Rower Data packet (Bluetooth SIG 0x2AD1); null if it's malformed. */
         fun parse(d: ByteArray, at: Long): RowerData? {

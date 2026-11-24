@@ -138,7 +138,8 @@ fun buildCsv(sessions: List<Session>): String {
     val sb = StringBuilder()
     sb.append("date,baseline,planned_sets,reps_per_set,ball_lb,rest_until_target,felt_1_to_10,")
     sb.append("set,reps,set_seconds,avg_hr,peak_hr,hr_drop_1min,target_hr,seconds_last_slam_to_target,")
-    sb.append("activity,row_meters,row_resistance,row_pace_sec_per_500m,row_strokes,row_avg_spm,row_avg_watts,row_interval_sec\n")
+    sb.append("activity,meters,row_resistance,pace_sec_per_500m_row_or_mile_run,row_strokes,row_avg_spm,avg_watts,interval_sec,")
+    sb.append("run_speed_mph,run_incline_pct\n")
     sessions.sortedBy { it.startMillis }.forEach { s ->
         s.sets.forEach { set ->
             sb.append(stamp.format(Date(s.startMillis))).append(',')
@@ -157,13 +158,15 @@ fun buildCsv(sessions: List<Session>): String {
             sb.append(if (set.targetHr > 0) set.targetHr else "").append(',')
             sb.append(set.timeToTargetSec ?: "").append(',')
             sb.append(s.activity.key).append(',')
-            sb.append(if (s.isRow) (if (set.meters > 0) set.meters else s.distanceM).takeIf { it > 0 } ?: "" else "").append(',')
+            sb.append(if (s.isMachine) (if (set.meters > 0) set.meters else s.distanceM).takeIf { it > 0 } ?: "" else "").append(',')
             sb.append(if (s.isRow && s.resistance > 0) s.resistance else "").append(',')
-            sb.append(s.pace500(set)?.let { "%.1f".format(Locale.US, it) } ?: "").append(',')
+            sb.append(s.pace(set)?.let { "%.1f".format(Locale.US, it) } ?: "").append(',')
             sb.append(if (set.strokes > 0) set.strokes else "").append(',')
             sb.append(if (set.avgSpm > 0) "%.1f".format(Locale.US, set.avgSpm) else "").append(',')
             sb.append(if (set.avgWatts > 0) set.avgWatts else "").append(',')
-            sb.append(if (s.isRow && s.intervalSec > 0) s.intervalSec else "").append('\n')
+            sb.append(if (s.isMachine && s.intervalSec > 0) s.intervalSec else "").append(',')
+            sb.append(if (s.isRun && s.speedTenthsMph > 0) "%.1f".format(Locale.US, s.speedTenthsMph / 10.0) else "").append(',')
+            sb.append(if (s.isRun) "%.1f".format(Locale.US, s.inclineTenths / 10.0) else "").append('\n')
         }
     }
     return sb.toString()

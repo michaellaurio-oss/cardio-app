@@ -51,6 +51,14 @@ He is the only user. Explain build and install steps plainly; he is not a day-to
 - Rowing by time: `UserSettings.rowByTime`/`rowIntervalSec` → `WorkoutConfig.intervalSec` (then `distanceM` = 0),
   saved as `Session.intervalSec`. `tick()` beeps 3-2-1 and calls `endSet()` at the time; rower meters are still
   recorded and give pace. `shape` shows "8 × 1:00".
+- Walk/Run (`Activity.RUN`, treadmill): `RunScreen`, `startRun()`, settings `UserSettings.run*` (speed/incline in
+  tenths, distance in hundredths of a mile). `Activity.isMachine` covers ROW and RUN (intervals, no mic);
+  `WorkoutUi.machine` / VM `machine` mean that (renamed from `rowing`). `Units` gives miles and pace per mile for
+  RUN, meters and /500 m for ROW; `Session.pace()`/`avgPace`/`paceUnit` (was pace500). `RowerManager(kind =
+  TREADMILL)` (`vm.treadmill`) reads FTMS Treadmill Data 0x2ACD (speed, distance, incline, power) with its own
+  saved address; untested on real hardware (Michael's treadmill brand unknown). Timed run intervals without a
+  treadmill estimate meters from the set speed. `RowingTrendsScreen(activity=…)` and `RowerTestScreen(treadmill=…)`
+  serve both machines.
 - Rowing analytics: `RowingTrendsScreen` (Screen.ROW_TRENDS), grouped by interval kind (same distance or same time). Verdict = latest vs
   average of the previous 3, under 2% = "about the same". Power per heartbeat = `avgWatts / avgHr`.
   Reuses `TrendChart`/`Choice`/`Legend` (internal in TrendsScreen.kt) and `HalfTable`.

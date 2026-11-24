@@ -247,6 +247,14 @@ class RowerProbe(context: Context) {
         val old = _streams.value[id]
         _streams.value = _streams.value + (id to Stream(id, (old?.count ?: 0) + 1, hex(value)))
         if (id == "2ad1") _rower.value = parseRowerData(value)
+        if (id == "2acd") _rower.value = RowerManager.parseTreadmill(value, 0)?.let { t ->
+            listOfNotNull(
+                t.speedKmh?.let { "Speed" to "%.1f mph".format(it / 1.609344) },
+                t.distanceM?.let { "Distance" to "$it m (%.2f mi)".format(it / 1609.344) },
+                t.inclinePct?.let { "Incline" to "$it %" },
+                t.watts?.let { "Power" to "$it W" },
+            ).toMap()
+        } ?: emptyMap()
     }
 
     /** Text to paste into a chat with Claude. */
@@ -272,7 +280,7 @@ class RowerProbe(context: Context) {
         )
         private val CHAR_NAMES = mapOf(
             "2a29" to "Manufacturer", "2a24" to "Model", "2a26" to "Firmware", "2a28" to "Software",
-            "2acc" to "FTMS features", "2ad1" to "Rower Data", "2ad3" to "Training Status",
+            "2acc" to "FTMS features", "2ad1" to "Rower Data", "2acd" to "Treadmill Data", "2ad3" to "Training Status",
             "2ad9" to "FTMS Control Point", "2ada" to "Machine Status", "2a37" to "Heart Rate",
             "2a19" to "Battery level",
         )

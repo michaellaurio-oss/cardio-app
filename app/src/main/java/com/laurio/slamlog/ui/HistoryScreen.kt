@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.laurio.slamlog.data.Session
+import com.laurio.slamlog.data.Units
 import com.laurio.slamlog.workout.mmss
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -67,7 +68,10 @@ fun HistoryScreen(
                     Label("All time")
                     Row {
                         Stat("workouts", "${sessions.size}", Modifier.weight(1f))
-                        if (sessions.all { it.isRow }) {
+                        if (sessions.all { it.isRun }) {
+                            Stat("miles", "%.1f".format(sessions.sumOf { it.totalMeters } / Units.METERS_PER_MILE), Modifier.weight(1f), color = Orange)
+                            Stat("intervals", "%,d".format(sessions.sumOf { it.sets.size }), Modifier.weight(1f))
+                        } else if (sessions.all { it.isRow }) {
                             Stat("m rowed", "%,d".format(sessions.sumOf { it.totalMeters }), Modifier.weight(1f), color = Orange)
                             Stat("intervals", "%,d".format(sessions.sumOf { it.sets.size }), Modifier.weight(1f))
                         } else {
@@ -105,16 +109,16 @@ fun HistoryScreen(
                 Row {
                     Column(Modifier.weight(1f)) {
                         val tags = listOfNotNull(
-                            if (s.isRow) "ROWING" else if (s.baseline) "BASELINE TEST" else "SLAM BALL",
+                            if (s.isRun) "WALK/RUN" else if (s.isRow) "ROWING" else if (s.baseline) "BASELINE TEST" else "SLAM BALL",
                             if (s.isLocked) "LOCKED" else null,
                         )
                         if (tags.isNotEmpty()) {
                             Text(tags.joinToString(" · "), color = Sky, fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.labelMedium)
                         }
-                        if (s.isRow) {
-                            val pace = s.avgPace500?.let { " · ${mmss(it.roundToInt())}/500 m" } ?: ""
-                            Text("%,d m · ${s.shape}$pace".format(s.totalMeters))
+                        if (s.isMachine) {
+                            val pace = s.avgPace?.let { " · ${mmss(it.roundToInt())}${s.paceUnit}" } ?: ""
+                            Text("${Units.distance(s.activity, s.totalMeters)} · ${s.shape}$pace")
                         } else {
                             Text("${s.totalReps} slams · ${s.sets.size} × ${s.targetReps} · ${s.ballWeightLbs} lb")
                         }

@@ -35,7 +35,7 @@ import com.laurio.slamlog.workout.WorkoutViewModel
 
 /** One-off check of what the rower's monitor sends over Bluetooth (see RowerProbe). */
 @Composable
-fun RowerTestScreen(vm: WorkoutViewModel, onBack: () -> Unit) {
+fun RowerTestScreen(vm: WorkoutViewModel, onBack: () -> Unit, treadmill: Boolean = false) {
     val probe = vm.rower
     val scanning by probe.scanning.collectAsState()
     val found by probe.found.collectAsState()
@@ -49,6 +49,7 @@ fun RowerTestScreen(vm: WorkoutViewModel, onBack: () -> Unit) {
     // The monitor takes one connection at a time: free it from the workout connection while testing.
     DisposableEffect(Unit) {
         vm.rowMachine.disconnect()
+        vm.treadmill.disconnect()
         onDispose { probe.stopScan(); probe.disconnect() }
     }
     BackHandler(onBack = onBack)
@@ -58,13 +59,17 @@ fun RowerTestScreen(vm: WorkoutViewModel, onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("ROWER TEST", fontSize = 28.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary,
+            Text(if (treadmill) "TREADMILL TEST" else "ROWER TEST", fontSize = 28.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f))
             TextButton(onClick = onBack) { Text("Back") }
         }
         SectionCard {
             Text(
-                "1. On the rower's monitor choose Connect App (it shows \"Ready for App Connection\" and an ID).\n" +
+                if (treadmill) "1. Turn the treadmill on (some need a workout started before they connect).\n" +
+                    "2. Close the treadmill's own app if it's open.\n" +
+                    "3. Tap Find machine, then Connect next to the treadmill.\n" +
+                    "4. Walk for a bit, then tap Copy report and paste it to Claude."
+                else "1. On the rower's monitor choose Connect App (it shows \"Ready for App Connection\" and an ID).\n" +
                     "2. Close the Rogue app if it's open.\n" +
                     "3. Tap Find rower, then Connect next to your rower.\n" +
                     "4. Row a few strokes, then tap Copy report and paste it to Claude.",
@@ -73,7 +78,7 @@ fun RowerTestScreen(vm: WorkoutViewModel, onBack: () -> Unit) {
             Text(status, color = Sky, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (scanning) OutlinedButton(onClick = { probe.stopScan() }) { Text("Stop searching") }
-                else Button(onClick = { probe.startScan() }) { Text("Find rower") }
+                else Button(onClick = { probe.startScan() }) { Text(if (treadmill) "Find machine" else "Find rower") }
                 OutlinedButton(onClick = { probe.disconnect() }) { Text("Disconnect") }
             }
         }
@@ -97,7 +102,7 @@ fun RowerTestScreen(vm: WorkoutViewModel, onBack: () -> Unit) {
 
         if (rower.isNotEmpty()) {
             SectionCard {
-                Label("Rower data (standard format)")
+                Label(if (treadmill) "Treadmill data (standard format)" else "Rower data (standard format)")
                 rower.forEach { (k, v) ->
                     Row { Text(k, Modifier.weight(1f)); Text(v, fontWeight = FontWeight.Bold, color = Orange) }
                 }

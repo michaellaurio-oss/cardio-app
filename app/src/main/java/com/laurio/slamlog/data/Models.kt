@@ -7,11 +7,31 @@ import org.json.JSONObject
 
 /** Which kind of workout a session is. Stored by [key] in saved workouts. */
 enum class Activity(val key: String) {
-    SLAM("slam"), ROW("row");
+    SLAM("slam"), ROW("row"), RUN("run");
+
+    /** Rowing and walk/run are interval workouts on a machine (no reps, no mic). */
+    val isMachine: Boolean get() = this != SLAM
 
     companion object {
         fun of(key: String?) = entries.firstOrNull { it.key == key } ?: SLAM
     }
+}
+
+/** Distances and paces in each activity's own units: rowing in meters and /500 m, walk/run in miles and /mile. */
+object Units {
+    const val METERS_PER_MILE = 1609.344
+
+    /** Meters per pace unit. */
+    fun paceMeters(a: Activity) = if (a == Activity.RUN) METERS_PER_MILE else 500.0
+
+    fun paceLabel(a: Activity) = if (a == Activity.RUN) "/mi" else "/500 m"
+
+    fun distance(a: Activity, meters: Int): String =
+        if (a == Activity.RUN) "%.2f mi".format(meters / METERS_PER_MILE) else "%,d m".format(meters)
+
+    /** Spoken, e.g. "1.25 miles" or "500 meters". */
+    fun spokenDistance(a: Activity, meters: Int): String =
+        if (a == Activity.RUN) "%.2f miles".format(meters / METERS_PER_MILE).replace(".00 ", " ") else "$meters meters"
 }
 
 /** What the next workout looks like. */
@@ -37,6 +57,9 @@ data class WorkoutConfig(
     val resistance: Int = 0,
     /** Rowing by time: seconds per interval (then [distanceM] is 0). */
     val intervalSec: Int = 0,
+    /** Walk/run: treadmill speed (tenths of mph) and incline (tenths of %), as set. Not saved here. */
+    val speedTenthsMph: Int = 0,
+    val inclineTenths: Int = 0,
 )
 
 /** Personal details (for zones and calories) and app preferences. */
@@ -83,6 +106,19 @@ data class UserSettings(
     val rowRestSec: Int = 90,
     /** Rowing's own recovery target (first load: the slam ball training target). */
     val rowTargetHr: Int = 130,
+    // ---- Walk/Run on a treadmill: run intervals, walking rest until HR recovers ----
+    val runIntervals: Int = 6,
+    val runByTime: Boolean = true,
+    val runIntervalSec: Int = 120,
+    /** Distance per interval in hundredths of a mile (25 = 0.25 mi). */
+    val runDistanceHundredthsMi: Int = 25,
+    /** Treadmill speed in tenths of mph (60 = 6.0) and incline in tenths of % (10 = 1.0%). */
+    val runSpeedTenthsMph: Int = 60,
+    val runInclineTenths: Int = 10,
+    val runRestUntilTarget: Boolean = true,
+    val runMinRestSec: Int = 60,
+    val runRestSec: Int = 90,
+    val runTargetHr: Int = 130,
 ) {
     val birthday: LocalDate?
         get() = birthDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
@@ -200,31 +236,41 @@ data class Session(
     val resistance: Int = 0,
     /** Rowing by time: seconds per interval (distanceM is then 0). */
     val intervalSec: Int = 0,
+    /** Walk/run: treadmill speed (tenths of mph) and incline (tenths of %) as set; 0 = not set. */
+    val speedTenthsMph: Int = 0,
+    val inclineTenths: Int = 0,
 ) {
     val totalReps: Int get() = sets.sumOf { it.reps }
 
     val isRow: Boolean get() = activity == Activity.ROW
+    val isRun: Boolean get() = activity == Activity.RUN
 
-    /** Rowing: meters rowed (as read from the rower, else intervals × planned distance). */
-    val totalMeters: Int get() = if (isRow) sets.sumOf { if (it.meters > 0) it.meters else distanceM } else 0
+    /** Rowing or walk/run: interval workouts on a machine. */
+    val isMachine: Boolean get() = activity.isMachine
 
-    /** Rowing: an interval's pace, in seconds per 500 m; null without a distance or time. */
-    fun pace500(set: SetResult): Double? {
+    /** Machine workouts: meters covered (as read from the machine, else intervals × planned distance). */
+    val totalMeters: Int get() = if (isMachine) sets.sumOf { if (it.meters > 0) it.meters else distanceM } else 0
+
+    /** An interval's pace in seconds per unit (500 m rowing, mile walk/run); null without a distance or time. */
+    fun pace(set: SetResult): Double? {
         val m = if (set.meters > 0) set.meters else distanceM
-        return if (isRow && m > 0 && set.durationSec > 0) set.durationSec * 500.0 / m else null
+        return if (isMachine && m > 0 && set.durationSec > 0) set.durationSec * Units.paceMeters(activity) / m else null
     }
+
+    /** "/500 m" or "/mi". */
+    val paceUnit: String get() = Units.paceLabel(activity)
 
     /** Rowing: averages over intervals that were read from the rower; null if none were. */
     val avgSpm: Double? get() = sets.map { it.avgSpm }.filter { it > 0 }.takeIf { it.isNotEmpty() }?.average()
     val avgWatts: Double? get() = sets.map { it.avgWatts }.filter { it > 0 }.takeIf { it.isNotEmpty() }?.average()
 
-    /** Rowing: average pace per 500 m over the intervals. */
-    val avgPace500: Double?
-        get() = sets.mapNotNull { pace500(it) }.takeIf { it.isNotEmpty() }?.average()
+    /** Average pace over the intervals (per 500 m rowing, per mile walk/run). */
+    val avgPace: Double?
+        get() = sets.mapNotNull { pace(it) }.takeIf { it.isNotEmpty() }?.average()
 
-    /** A finished set (all reps done) or, for rowing, any timed interval. */
+    /** A finished set (all reps done) or, for machine workouts, any timed interval. */
     private fun finishedSet(it: SetResult) =
-        it.durationSec > 0 && (isRow || (it.reps > 0 && (targetReps == 0 || it.reps >= targetReps)))
+        it.durationSec > 0 && (isMachine || (it.reps > 0 && (targetReps == 0 || it.reps >= targetReps)))
 
     /** Whether the workout is protected from deletion (explicit choice, else finished baselines). */
     val isLocked: Boolean get() = locked ?: (baseline && completed)
@@ -242,9 +288,13 @@ data class Session(
     /** Short description like "10 × 20 · 20 lb", or for rowing "8 × 500 m · resistance 5". */
     val shape: String get() {
         val n = if (plannedSets > 0) plannedSets else sets.size
-        val each = if (intervalSec > 0) "%d:%02d".format(intervalSec / 60, intervalSec % 60) else "$distanceM m"
-        return if (isRow) "$n × $each" + (if (resistance > 0) " · resistance $resistance" else "")
-        else "$n × $targetReps · $ballWeightLbs lb"
+        val each = if (intervalSec > 0) "%d:%02d".format(intervalSec / 60, intervalSec % 60) else Units.distance(activity, distanceM)
+        return when (activity) {
+            Activity.ROW -> "$n × $each" + (if (resistance > 0) " · resistance $resistance" else "")
+            Activity.RUN -> "$n × $each" + (if (speedTenthsMph > 0) " · %.1f mph".format(speedTenthsMph / 10.0) else "") +
+                (if (inclineTenths > 0) " · %.1f%% incline".format(inclineTenths / 10.0) else "")
+            Activity.SLAM -> "$n × $targetReps · $ballWeightLbs lb"
+        }
     }
 
     /** Finished sets (all reps done) with a duration: the ones that show how long a set takes. */
@@ -297,6 +347,8 @@ data class Session(
         .put("distanceM", distanceM)
         .put("resistance", resistance)
         .put("intervalSec", intervalSec)
+        .put("speedTenthsMph", speedTenthsMph)
+        .put("inclineTenths", inclineTenths)
 
     companion object {
         fun fromJson(o: JSONObject): Session {
@@ -325,6 +377,8 @@ data class Session(
                 distanceM = o.optInt("distanceM", 0),
                 resistance = o.optInt("resistance", 0),
                 intervalSec = o.optInt("intervalSec", 0),
+                speedTenthsMph = o.optInt("speedTenthsMph", 0),
+                inclineTenths = o.optInt("inclineTenths", 0),
             )
         }
     }

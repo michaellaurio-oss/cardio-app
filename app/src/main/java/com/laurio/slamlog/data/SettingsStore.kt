@@ -33,6 +33,16 @@ class SettingsStore(context: Context) {
         rowMinRestSec = p.getInt("rowMinRestSec", 60),
         rowRestSec = p.getInt("rowRestSec", 90),
         rowTargetHr = p.getInt("rowTargetHr", p.getInt("recoveryTargetHr", 130)),
+        runIntervals = p.getInt("runIntervals", 6),
+        runByTime = p.getBoolean("runByTime", true),
+        runIntervalSec = p.getInt("runIntervalSec", 120),
+        runDistanceHundredthsMi = p.getInt("runDistanceHundredthsMi", 25),
+        runSpeedTenthsMph = p.getInt("runSpeedTenthsMph", 60),
+        runInclineTenths = p.getInt("runInclineTenths", 10),
+        runRestUntilTarget = p.getBoolean("runRestUntilTarget", true),
+        runMinRestSec = p.getInt("runMinRestSec", 60),
+        runRestSec = p.getInt("runRestSec", 90),
+        runTargetHr = p.getInt("runTargetHr", p.getInt("recoveryTargetHr", 130)),
     )
 
     fun saveSettings(s: UserSettings) {
@@ -64,6 +74,16 @@ class SettingsStore(context: Context) {
             .putInt("rowMinRestSec", s.rowMinRestSec)
             .putInt("rowRestSec", s.rowRestSec)
             .putInt("rowTargetHr", s.rowTargetHr)
+            .putInt("runIntervals", s.runIntervals)
+            .putBoolean("runByTime", s.runByTime)
+            .putInt("runIntervalSec", s.runIntervalSec)
+            .putInt("runDistanceHundredthsMi", s.runDistanceHundredthsMi)
+            .putInt("runSpeedTenthsMph", s.runSpeedTenthsMph)
+            .putInt("runInclineTenths", s.runInclineTenths)
+            .putBoolean("runRestUntilTarget", s.runRestUntilTarget)
+            .putInt("runMinRestSec", s.runMinRestSec)
+            .putInt("runRestSec", s.runRestSec)
+            .putInt("runTargetHr", s.runTargetHr)
             .apply()
     }
 
@@ -105,4 +125,13 @@ class SettingsStore(context: Context) {
     var rowerName: String?
         get() = p.getString("rowerName", null)
         set(v) = p.edit().putString("rowerName", v).apply()
+
+    /** The treadmill (FTMS), saved once connected. */
+    var treadmillAddress: String?
+        get() = p.getString("treadmillAddress", null)
+        set(v) = p.edit().putString("treadmillAddress", v).apply()
+
+    var treadmillName: String?
+        get() = p.getString("treadmillName", null)
+        set(v) = p.edit().putString("treadmillName", v).apply()
 }
