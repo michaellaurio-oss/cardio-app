@@ -75,7 +75,7 @@ fun BaselineScreen(
             "${settings.baselineSets} × ${settings.baselineReps} · ${settings.baselineBallLbs} lb" +
                 (if (settings.baselineRestUntilTarget) " · rest ${mmss(settings.baselineMinRestSec)}+ until HR ≤ $target" else "")
         else machineBaselineText(activity, mb)
-        val verdict = Progress.verdict(baselines, target)
+        val verdict = Progress.verdict(baselines, target, activity)
         SectionCard {
             Label("The test")
             Text(definition, fontWeight = FontWeight.Bold, fontSize = 18.sp)

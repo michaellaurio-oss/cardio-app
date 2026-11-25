@@ -78,12 +78,12 @@ object Progress {
      * and the last two, so one off day (poor sleep, caffeine, heat) can't flip the answer; with 2 or 3
      * it compares the first and the latest. Differences under 3 seconds or 5% count as "about the same".
      */
-    fun verdict(baselines: List<Session>, target: Int): Verdict {
+    fun verdict(baselines: List<Session>, target: Int, activity: Activity = Activity.SLAM): Verdict {
         if (baselines.isEmpty()) {
             return Verdict(
                 "No baseline test yet",
-                "Tap BASELINE on the Home screen to run one. It's the same workout every time, so it's a fair " +
-                    "yardstick. Repeat it every couple of weeks.",
+                (if (activity == Activity.SLAM) "Tap BASELINE on the Slam Ball screen to run one. " else "Tap START BASELINE to run one. ") +
+                    "It's the same workout every time, so it's a fair yardstick. Repeat it every couple of weeks.",
                 null,
             )
         }
@@ -114,7 +114,7 @@ object Progress {
         }
         fun dates(list: List<Session>) = list.joinToString(" & ") { day.format(Date(it.startMillis)) }
         val detail = buildString {
-            append("Average time from last slam to $target: ")
+            append("Average time from ${if (activity == Activity.SLAM) "last slam" else "the end of each interval"} to $target: ")
             if (n == 1) {
                 append("${mmss(f.roundToInt())} on ${dates(early)} → ${mmss(l.roundToInt())} on ${dates(recent)}")
             } else {
