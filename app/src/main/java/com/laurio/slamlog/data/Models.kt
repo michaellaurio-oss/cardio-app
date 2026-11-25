@@ -30,8 +30,11 @@ object Units {
         if (a == Activity.RUN) "%.2f mi".format(meters / METERS_PER_MILE) else "%,d m".format(meters)
 
     /** Spoken, e.g. "1.25 miles" or "500 meters". */
-    fun spokenDistance(a: Activity, meters: Int): String =
-        if (a == Activity.RUN) "%.2f miles".format(meters / METERS_PER_MILE).replace(".00 ", " ") else "$meters meters"
+    fun spokenDistance(a: Activity, meters: Int): String {
+        if (a != Activity.RUN) return "$meters meters"
+        val mi = "%.2f".format(java.util.Locale.US, meters / METERS_PER_MILE).trimEnd('0').trimEnd('.')
+        return if (mi == "1") "1 mile" else "$mi miles"
+    }
 }
 
 /**

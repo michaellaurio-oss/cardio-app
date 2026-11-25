@@ -165,7 +165,7 @@ fun buildCsv(sessions: List<Session>): String {
     sb.append("date,baseline,planned_sets,reps_per_set,ball_lb,rest_until_target,felt_1_to_10,")
     sb.append("set,reps,set_seconds,avg_hr,peak_hr,hr_drop_1min,target_hr,seconds_last_slam_to_target,")
     sb.append("activity,meters,row_resistance,pace_sec_per_500m_row_or_mile_run,row_strokes,row_avg_spm,avg_watts,interval_sec,")
-    sb.append("run_speed_mph,run_incline_pct\n")
+    sb.append("run_speed_mph,run_incline_pct,walk_speed_mph\n")
     sessions.sortedBy { it.startMillis }.forEach { s ->
         s.sets.forEach { set ->
             sb.append(stamp.format(Date(s.startMillis))).append(',')
@@ -192,7 +192,8 @@ fun buildCsv(sessions: List<Session>): String {
             sb.append(if (set.avgWatts > 0) set.avgWatts else "").append(',')
             sb.append(if (s.isMachine && s.intervalSec > 0) s.intervalSec else "").append(',')
             sb.append(if (s.isRun && s.speedTenthsMph > 0) "%.1f".format(Locale.US, s.speedTenthsMph / 10.0) else "").append(',')
-            sb.append(if (s.isRun) "%.1f".format(Locale.US, s.inclineTenths / 10.0) else "").append('\n')
+            sb.append(if (s.isRun) "%.1f".format(Locale.US, s.inclineTenths / 10.0) else "").append(',')
+            sb.append(if (s.isRun && s.walkSpeedTenthsMph > 0) "%.1f".format(Locale.US, s.walkSpeedTenthsMph / 10.0) else "").append('\n')
         }
     }
     return sb.toString()
