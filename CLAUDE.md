@@ -120,6 +120,11 @@ Compose BOM 2024.12.01, core-ktx 1.15.0, Gradle 8.11.1.
 
 ## Conventions
 
+- Michael also designs features in claude.ai chats in the "Cardio Workout App" project; those chats save
+  decisions as project docs. At the start of a session, and whenever he refers to something not in this
+  conversation, read the project docs (Projects tool) and check `git log` before answering or building:
+  the repo shows what's actually built. When you build something a doc describes, update the doc's status.
+
 - Keep the README's user-facing feature list in sync when features change.
 - Keep personal details (paths with his username, device ids, email) out of committed files; put them
   in `CLAUDE.local.md` or `install.local.bat`, both gitignored.
