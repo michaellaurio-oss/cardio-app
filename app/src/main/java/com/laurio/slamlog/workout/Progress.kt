@@ -1,6 +1,9 @@
 package com.laurio.slamlog.workout
 
+import com.laurio.slamlog.data.Activity
+import com.laurio.slamlog.data.MachineBaseline
 import com.laurio.slamlog.data.Session
+import com.laurio.slamlog.data.Units
 import com.laurio.slamlog.data.UserSettings
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -21,15 +24,16 @@ object Progress {
      * Finished baseline tests that match today's baseline definition (sets, reps, ball weight,
      * rest mode, minimum rest) and have a time to the baseline target, oldest first. Only these are compared with each other.
      */
-    fun baselines(sessions: List<Session>, s: UserSettings): List<Session> = sessions
-        .filter { it.baseline && whyNotCompared(it, s) == null }
+    fun baselines(sessions: List<Session>, s: UserSettings, activity: Activity = Activity.SLAM): List<Session> = sessions
+        .filter { it.activity == activity && it.baseline && whyNotCompared(it, s) == null }
         .sortedBy { it.startMillis }
 
     /**
      * Why a baseline test isn't in the comparison (it doesn't match the current baseline settings),
      * or null if it is. Workouts saved before the minimum rest was recorded (0) are allowed.
      */
-    fun whyNotCompared(t: Session, s: UserSettings): String? = when {
+    fun whyNotCompared(t: Session, s: UserSettings): String? =
+        if (t.isMachine) whyMachineNotCompared(t, s.machineBaseline(t.activity)) else when {
         !t.completed -> "not every set was finished"
         t.targetReps != s.baselineReps -> "${t.targetReps} reps per set (baseline is ${s.baselineReps})"
         t.ballWeightLbs != s.baselineBallLbs -> "${t.ballWeightLbs} lb ball (baseline is ${s.baselineBallLbs} lb)"
@@ -41,9 +45,31 @@ object Progress {
         else -> null
     }
 
+    /** The rowing / walk-run version: same intervals, machine settings and rest as the baseline definition. */
+    private fun whyMachineNotCompared(t: Session, b: MachineBaseline): String? {
+        fun mph(tenths: Int) = "%.1f mph".format(Locale.US, tenths / 10.0)
+        val bEach = if (b.byTime) mmss(b.intervalSec) else Units.distance(t.activity, b.distanceM)
+        return when {
+            !t.completed -> "not every interval was finished"
+            t.plannedSets != 0 && t.plannedSets != b.intervals -> "${t.plannedSets} intervals (baseline is ${b.intervals})"
+            b.byTime && t.intervalSec != b.intervalSec ->
+                "${if (t.intervalSec > 0) mmss(t.intervalSec) else Units.distance(t.activity, t.distanceM)} intervals (baseline is $bEach)"
+            !b.byTime && (t.intervalSec > 0 || kotlin.math.abs(t.distanceM - b.distanceM) > 2) ->
+                "${if (t.intervalSec > 0) mmss(t.intervalSec) else Units.distance(t.activity, t.distanceM)} intervals (baseline is $bEach)"
+            t.isRow && t.resistance != b.resistance -> "resistance ${t.resistance} (baseline is ${b.resistance})"
+            t.isRun && t.speedTenthsMph != b.speedTenthsMph -> "run at ${mph(t.speedTenthsMph)} (baseline is ${mph(b.speedTenthsMph)})"
+            t.isRun && t.walkSpeedTenthsMph != b.walkSpeedTenthsMph -> "walk at ${mph(t.walkSpeedTenthsMph)} (baseline is ${mph(b.walkSpeedTenthsMph)})"
+            t.isRun && t.inclineTenths != b.inclineTenths -> "a different incline"
+            t.restUntilTarget != b.restUntilTarget -> "a different rest mode"
+            b.restUntilTarget && t.minRestSec != b.restSec -> "${mmss(t.minRestSec)} minimum rest (baseline is ${mmss(b.restSec)})"
+            t.avgTimeToTarget(b.targetHr) == null -> "no time to ${b.targetHr} (timed to a different target, or HR never got there)"
+            else -> null
+        }
+    }
+
     /** Baseline tests left out of the comparison, each with the reason, newest first. */
-    fun excludedBaselines(sessions: List<Session>, s: UserSettings): List<Pair<Session, String>> = sessions
-        .filter { it.baseline }
+    fun excludedBaselines(sessions: List<Session>, s: UserSettings, activity: Activity = Activity.SLAM): List<Pair<Session, String>> = sessions
+        .filter { it.baseline && it.activity == activity }
         .mapNotNull { t -> whyNotCompared(t, s)?.let { t to it } }
         .sortedByDescending { it.first.startMillis }
 

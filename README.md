@@ -121,6 +121,15 @@ heart rate comes back down.
   doesn't need Bluetooth. Heart rate (and the recovery clock) comes from the chest strap as usual.
 - Its own History and Trends (pace per mile, recovery to target, miles per week, bests).
 
+## Baseline tests for rowing and walk/run
+
+Rowing and Walk/Run each have a **BASELINE TEST** button, like slam ball's: a fixed workout you repeat
+every couple of weeks so recovery can be compared fairly while training changes. Each has its own
+**Baseline settings** (rowing: intervals, distance or time, resistance, rest, target; walk/run: intervals,
+run time or distance, run and walk speed, incline, walk, target), the same "is my recovery improving?"
+verdict, and the same Baseline trends screen (test vs. test). Only tests that match the current
+baseline settings are compared; finished baseline tests are locked by default.
+
 ## Everything else
 
 - **Rep-based sets**: choose sets, reps per set, rest and ball weight. The set ends itself at the target.

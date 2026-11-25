@@ -36,6 +36,7 @@ import com.laurio.slamlog.ui.RowerTestScreen
 import com.laurio.slamlog.ui.RowingScreen
 import com.laurio.slamlog.ui.RowingTrendsScreen
 import com.laurio.slamlog.ui.RunScreen
+import com.laurio.slamlog.ui.MachineBaselineSettingsScreen
 import com.laurio.slamlog.data.Activity
 import com.laurio.slamlog.ui.StartScreen
 import com.laurio.slamlog.ui.SettingsScreen
@@ -87,6 +88,8 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
     var rowTrendsBack by rememberSaveable { mutableStateOf(Screen.ROWING) }
     // Rowing and Walk/Run share the trends and Bluetooth test screens.
     var machineActivity by rememberSaveable { mutableStateOf(Activity.ROW) }
+    // Which workout's baseline test the Baseline screens show.
+    var baselineActivity by rememberSaveable { mutableStateOf(Activity.SLAM) }
     // Where Trends' Back goes (Home, or Baseline when opened from there).
     var trendsBack by rememberSaveable { mutableStateOf(Screen.HOME) }
     // Where About you's Back goes (it's only opened from the first screen now).
@@ -142,7 +145,7 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 vm = vm,
                 onRequestPermissions = requestPermissions,
                 onStart = { workoutFrom = Screen.HOME; vm.startWorkout(); screen = Screen.WORKOUT },
-                onBaseline = { screen = Screen.BASELINE },
+                onBaseline = { baselineActivity = Activity.SLAM; screen = Screen.BASELINE },
                 onHistory = { historyBack = Screen.HOME; screen = Screen.HISTORY },
                 onTrends = { trendsBack = Screen.HOME; screen = Screen.TRENDS },
                 onSettings = { settingsBack = Screen.HOME; screen = Screen.SETTINGS },
@@ -155,6 +158,7 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onHistory = { historyBack = Screen.ROWING; screen = Screen.HISTORY },
                 onRowerTest = { machineActivity = Activity.ROW; screen = Screen.ROWER_TEST },
                 onTrends = { machineActivity = Activity.ROW; rowTrendsBack = Screen.ROWING; screen = Screen.ROW_TRENDS },
+                onBaseline = { baselineActivity = Activity.ROW; screen = Screen.BASELINE },
                 onBack = { screen = Screen.START },
             )
             Screen.RUN -> RunScreen(
@@ -163,6 +167,7 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onOpen = { shown = it; summaryBack = Screen.RUN; screen = Screen.SUMMARY },
                 onHistory = { historyBack = Screen.RUN; screen = Screen.HISTORY },
                 onTrends = { machineActivity = Activity.RUN; rowTrendsBack = Screen.RUN; screen = Screen.ROW_TRENDS },
+                onBaseline = { baselineActivity = Activity.RUN; screen = Screen.BASELINE },
                 onBack = { screen = Screen.START },
             )
             Screen.ROWER_TEST -> {
@@ -220,19 +225,35 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 onBack = { screen = settingsBack },
             )
             Screen.ABOUT_YOU -> AboutYouScreen(vm, onBack = { screen = aboutBack })
-            Screen.BASELINE -> BaselineScreen(
-                vm,
-                onStartBaseline = { workoutFrom = Screen.HOME; vm.startBaseline(); screen = Screen.WORKOUT },
-                onTrends = { trendsBack = Screen.BASELINE; screen = Screen.TRENDS },
-                onBaselineTrends = { screen = Screen.BASELINE_TRENDS },
-                onBaselineSettings = { screen = Screen.BASELINE_SETTINGS },
-                onBack = { screen = Screen.HOME },
-            )
-            Screen.BASELINE_SETTINGS -> BaselineSettingsScreen(vm, onBack = { screen = Screen.BASELINE })
+            Screen.BASELINE -> {
+                val act = baselineActivity
+                // The workout screen the baseline belongs to.
+                val home = when (act) { Activity.SLAM -> Screen.HOME; Activity.ROW -> Screen.ROWING; Activity.RUN -> Screen.RUN }
+                BaselineScreen(
+                    vm,
+                    onStartBaseline = {
+                        workoutFrom = home
+                        if (act == Activity.SLAM) vm.startBaseline() else vm.startMachineBaseline(act)
+                        screen = Screen.WORKOUT
+                    },
+                    onTrends = {
+                        if (act == Activity.SLAM) { trendsBack = Screen.BASELINE; screen = Screen.TRENDS }
+                        else { machineActivity = act; rowTrendsBack = Screen.BASELINE; screen = Screen.ROW_TRENDS }
+                    },
+                    onBaselineTrends = { screen = Screen.BASELINE_TRENDS },
+                    onBaselineSettings = { screen = Screen.BASELINE_SETTINGS },
+                    onBack = { screen = home },
+                    activity = act,
+                )
+            }
+            Screen.BASELINE_SETTINGS ->
+                if (baselineActivity == Activity.SLAM) BaselineSettingsScreen(vm, onBack = { screen = Screen.BASELINE })
+                else MachineBaselineSettingsScreen(vm, baselineActivity, onBack = { screen = Screen.BASELINE })
             Screen.BASELINE_TRENDS -> BaselineTrendsScreen(
-                sessions = sessions.filter { it.activity == Activity.SLAM },
+                sessions = sessions.filter { it.activity == baselineActivity },
                 settings = settings,
                 onBack = { screen = Screen.BASELINE },
+                activity = baselineActivity,
             )
         }
     }

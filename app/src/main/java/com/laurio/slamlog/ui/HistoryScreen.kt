@@ -110,6 +110,7 @@ fun HistoryScreen(
                     Column(Modifier.weight(1f)) {
                         val tags = listOfNotNull(
                             if (s.isRun) "WALK/RUN" else if (s.isRow) "ROWING" else if (s.baseline) "BASELINE TEST" else "SLAM BALL",
+                            if (s.isMachine && s.baseline) "BASELINE TEST" else null,
                             if (s.isLocked) "LOCKED" else null,
                         )
                         if (tags.isNotEmpty()) {

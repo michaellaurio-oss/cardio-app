@@ -61,7 +61,8 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
             Text(if (run) "WALK / RUN" else if (row) "ROWING" else "WORKOUT", fontSize = 26.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
             Text(dateFmt.format(Date(session.startMillis)), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                (if (run) "Walk/run · " else if (row) "Rowing · " else if (session.baseline) "Baseline test · " else "Training · ") + session.shape +
+                (if (run) "Walk/run${if (session.baseline) " baseline test" else ""} · "
+                else if (row) "Rowing${if (session.baseline) " baseline test" else ""} · " else if (session.baseline) "Baseline test · " else "Training · ") + session.shape +
                     if (!session.completed) " · ended early" else "",
                 color = if (session.baseline) Sky else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold,
@@ -200,10 +201,8 @@ fun SummaryScreen(session: Session, maxHr: Int, onRate: (Int) -> Unit, onToggleB
         }
 
         Button(onClick = onDone, modifier = Modifier.fillMaxWidth().height(56.dp)) { Text("Done") }
-        if (!row) {
-            TextButton(onClick = { onToggleBaseline(!session.baseline) }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (session.baseline) "Don't count this as a baseline test" else "Count this as a baseline test")
-            }
+        TextButton(onClick = { onToggleBaseline(!session.baseline) }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (session.baseline) "Don't count this as a baseline test" else "Count this as a baseline test")
         }
         SwitchRow(
             "Lock this workout",

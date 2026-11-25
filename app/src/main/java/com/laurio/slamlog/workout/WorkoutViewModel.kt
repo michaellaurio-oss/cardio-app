@@ -273,6 +273,32 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    /** Start the rowing or walk/run baseline test: its fixed definition, saved as a baseline. */
+    fun startMachineBaseline(activity: Activity) {
+        val b = _settings.value.machineBaseline(activity)
+        if (activity == Activity.ROW) rowMachine.reconnect()
+        startWorkout(
+            WorkoutConfig(
+                sets = b.intervals,
+                targetReps = 0,
+                restSec = b.restSec,
+                ballWeightLbs = 0,
+                autoCount = false,
+                restUntilTarget = b.restUntilTarget,
+                minRestSec = b.restSec,
+                targetHr = b.targetHr,
+                activity = activity,
+                distanceM = if (b.byTime) 0 else b.distanceM,
+                resistance = if (activity == Activity.ROW) b.resistance else 0,
+                intervalSec = if (b.byTime) b.intervalSec else 0,
+                speedTenthsMph = if (activity == Activity.RUN) b.speedTenthsMph else 0,
+                inclineTenths = if (activity == Activity.RUN) b.inclineTenths else 0,
+                walkSpeedTenthsMph = if (activity == Activity.RUN) b.walkSpeedTenthsMph else 0,
+            ),
+            baseline = true,
+        )
+    }
+
     /** Start a rowing workout with the intervals set on the Rowing screen. */
     fun startRowing() {
         rowMachine.reconnect()
@@ -365,7 +391,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         )
         if (machine) {
             val each = if (cfg.intervalSec > 0) spokenTime(cfg.intervalSec) else Units.spokenDistance(cfg.activity, cfg.distanceM)
-            speaker.say("Get ready. ${cfg.sets} intervals of $each.", interrupt = true)
+            speaker.say("Get ready${if (baseline) " for your baseline test" else ""}. ${cfg.sets} intervals of $each.", interrupt = true)
         } else {
             speaker.say("Get ready${if (baseline) " for your baseline test" else ""}. ${cfg.sets} sets of ${cfg.targetReps}.", interrupt = true)
         }

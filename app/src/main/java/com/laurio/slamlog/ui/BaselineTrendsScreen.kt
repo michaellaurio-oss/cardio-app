@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.laurio.slamlog.data.Activity
 import com.laurio.slamlog.data.Session
 import com.laurio.slamlog.data.UserSettings
 import com.laurio.slamlog.workout.BaselineSummary
@@ -71,10 +72,16 @@ private fun plural(n: Int, word: String) = "$n $word" + if (n == 1) "" else "s"
  * consecutive pairs of tests, and every metric as "% better than the first test". Opened from Baseline.
  */
 @Composable
-fun BaselineTrendsScreen(sessions: List<Session>, settings: UserSettings, onBack: () -> Unit) {
+fun BaselineTrendsScreen(
+    sessions: List<Session>,
+    settings: UserSettings,
+    onBack: () -> Unit,
+    /** Slam ball, rowing or walk/run baseline tests. */
+    activity: Activity = Activity.SLAM,
+) {
     BackHandler(onBack = onBack)
-    val target = settings.baselineTargetHr
-    val summarized = Progress.baselines(sessions, settings).map { BaselineTrends.summarize(it, target) }
+    val target = settings.baselineTarget(activity)
+    val summarized = Progress.baselines(sessions, settings, activity).map { BaselineTrends.summarize(it, target) }
     val real = summarized.filter { it.sets.size >= BaselineTrends.MIN_SETS }
     val skipped = summarized.filter { it.sets.size < BaselineTrends.MIN_SETS }
     var withSamples by remember { mutableStateOf(false) }
@@ -128,7 +135,7 @@ fun BaselineTrendsScreen(sessions: List<Session>, settings: UserSettings, onBack
         } else {
             SectionCard {
                 Label("Test vs. test")
-                PairComparison(tests, target)
+                PairComparison(tests, target, activity = activity)
             }
             SectionCard {
                 val ref = tests.take(BaselineTrends.referenceCount(tests.size))
@@ -191,7 +198,7 @@ private fun fit(t: BaselineSummary): Line? {
 private fun secs(v: Float): String { val r = v.roundToInt(); return if (r < 60) "$r s" else mmss(r) }
 
 @Composable
-private fun PairComparison(tests: List<BaselineSummary>, target: Int) {
+private fun PairComparison(tests: List<BaselineSummary>, target: Int, activity: Activity = Activity.SLAM) {
     val pairs = tests.size - 1
     var cur by remember(tests.size) { mutableIntStateOf(0) }
     var playing by remember(tests.size) { mutableStateOf(pairs > 1) }
@@ -306,7 +313,8 @@ private fun PairComparison(tests: List<BaselineSummary>, target: Int) {
             style = MaterialTheme.typography.labelSmall, color = muted)
     }
     Text(
-        "Across: peak heart rate during the set (bpm). Up: seconds from last slam to $target. " +
+        "Across: peak heart rate during the ${if (activity == Activity.SLAM) "set" else "interval"} (bpm). " +
+            "Up: seconds from ${if (activity == Activity.SLAM) "last slam" else "the end of the interval"} to $target. " +
             "Lower dots mean faster recovery from the same effort.",
         style = MaterialTheme.typography.bodySmall, color = muted,
     )

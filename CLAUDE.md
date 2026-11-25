@@ -62,6 +62,11 @@ He is the only user. Explain build and install steps plainly; he is not a day-to
   `Session.walkSpeedTenthsMph`), incline. Speech calls the speed to set at each run and walk. `WorkoutConfig.clockEndSec`: run intervals
   end on the clock, by time or distance ÷ set speed; meters/pace come from the set speed. `RowingTrendsScreen(activity=…)` and `RowerTestScreen(treadmill=…)`
   serve both machines.
+- Machine baselines: `MachineBaseline` (`UserSettings.rowBaseline`/`runBaseline`, stored as JSON strings in prefs,
+  defaults `ROW_DEFAULT`/`RUN_DEFAULT`), started by `startMachineBaseline(activity)` with `baseline = true`.
+  `Progress.baselines/excludedBaselines(…, activity)`; `whyNotCompared` dispatches to `whyMachineNotCompared`.
+  `BaselineScreen`, `BaselineTrendsScreen` take `activity`; `MachineBaselineSettingsScreen` edits the definition.
+  MainActivity's `baselineActivity` picks which baseline the BASELINE* screens show.
 - Rowing analytics: `RowingTrendsScreen` (Screen.ROW_TRENDS), grouped by interval kind (same distance or same time). Verdict = latest vs
   average of the previous 3, under 2% = "about the same". Power per heartbeat = `avgWatts / avgHr`.
   Reuses `TrendChart`/`Choice`/`Legend` (internal in TrendsScreen.kt) and `HalfTable`.

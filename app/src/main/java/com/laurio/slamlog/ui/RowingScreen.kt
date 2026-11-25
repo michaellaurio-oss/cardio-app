@@ -47,6 +47,7 @@ fun RowingScreen(
     onHistory: () -> Unit,
     onRowerTest: () -> Unit,
     onTrends: () -> Unit,
+    onBaseline: () -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -181,6 +182,9 @@ fun RowingScreen(
         Button(onClick = onStart, modifier = Modifier.fillMaxWidth().height(64.dp)) {
             Text("START ROWING  ·  ${s.rowIntervals} × " + (if (s.rowByTime) mmss(s.rowIntervalSec) else "${s.rowDistanceM} m"),
                 fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        OutlinedButton(onClick = onBaseline, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+            Text("BASELINE TEST", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
 
         if (rows.isNotEmpty()) {

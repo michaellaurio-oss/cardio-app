@@ -44,6 +44,7 @@ fun RunScreen(
     onOpen: (Session) -> Unit,
     onHistory: () -> Unit,
     onTrends: () -> Unit,
+    onBaseline: () -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -135,6 +136,9 @@ fun RunScreen(
 
         Button(onClick = onStart, modifier = Modifier.fillMaxWidth().height(64.dp)) {
             Text("START  ·  ${s.runIntervals} × $each", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        OutlinedButton(onClick = onBaseline, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+            Text("BASELINE TEST", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
 
         if (runs.isNotEmpty()) {

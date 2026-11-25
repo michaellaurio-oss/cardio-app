@@ -44,6 +44,8 @@ class SettingsStore(context: Context) {
         runMinRestSec = p.getInt("runMinRestSec", 60),
         runRestSec = p.getInt("runRestSec", 90),
         runTargetHr = p.getInt("runTargetHr", p.getInt("recoveryTargetHr", 130)),
+        rowBaseline = MachineBaseline.fromJson(p.getString("rowBaseline", null), MachineBaseline.ROW_DEFAULT),
+        runBaseline = MachineBaseline.fromJson(p.getString("runBaseline", null), MachineBaseline.RUN_DEFAULT),
     )
 
     fun saveSettings(s: UserSettings) {
@@ -86,6 +88,8 @@ class SettingsStore(context: Context) {
             .putInt("runMinRestSec", s.runMinRestSec)
             .putInt("runRestSec", s.runRestSec)
             .putInt("runTargetHr", s.runTargetHr)
+            .putString("rowBaseline", s.rowBaseline.toJson().toString())
+            .putString("runBaseline", s.runBaseline.toJson().toString())
             .apply()
     }
 

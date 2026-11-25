@@ -34,6 +34,56 @@ object Units {
         if (a == Activity.RUN) "%.2f miles".format(meters / METERS_PER_MILE).replace(".00 ", " ") else "$meters meters"
 }
 
+/**
+ * A rowing or walk/run baseline test: the fixed workout that's repeated so recovery can be compared fairly.
+ * Rowing uses [resistance]; walk/run uses the speeds and [inclineTenths]. [restSec] is the minimum rest (walk)
+ * when [restUntilTarget], else the exact rest.
+ */
+data class MachineBaseline(
+    val intervals: Int,
+    val byTime: Boolean,
+    val intervalSec: Int,
+    val distanceM: Int,
+    val resistance: Int = 0,
+    val speedTenthsMph: Int = 0,
+    val walkSpeedTenthsMph: Int = 0,
+    val inclineTenths: Int = 0,
+    val restUntilTarget: Boolean = true,
+    val restSec: Int = 60,
+    val targetHr: Int = 130,
+) {
+    fun toJson(): JSONObject = JSONObject()
+        .put("intervals", intervals).put("byTime", byTime).put("intervalSec", intervalSec).put("distanceM", distanceM)
+        .put("resistance", resistance).put("speedTenthsMph", speedTenthsMph).put("walkSpeedTenthsMph", walkSpeedTenthsMph)
+        .put("inclineTenths", inclineTenths).put("restUntilTarget", restUntilTarget).put("restSec", restSec)
+        .put("targetHr", targetHr)
+
+    companion object {
+        val ROW_DEFAULT = MachineBaseline(intervals = 8, byTime = false, intervalSec = 300, distanceM = 500, resistance = 5)
+        val RUN_DEFAULT = MachineBaseline(intervals = 6, byTime = true, intervalSec = 120, distanceM = 402,
+            speedTenthsMph = 60, walkSpeedTenthsMph = 30, inclineTenths = 10)
+
+        fun fromJson(text: String?, fallback: MachineBaseline): MachineBaseline = try {
+            val o = JSONObject(text ?: return fallback)
+            MachineBaseline(
+                intervals = o.optInt("intervals", fallback.intervals),
+                byTime = o.optBoolean("byTime", fallback.byTime),
+                intervalSec = o.optInt("intervalSec", fallback.intervalSec),
+                distanceM = o.optInt("distanceM", fallback.distanceM),
+                resistance = o.optInt("resistance", fallback.resistance),
+                speedTenthsMph = o.optInt("speedTenthsMph", fallback.speedTenthsMph),
+                walkSpeedTenthsMph = o.optInt("walkSpeedTenthsMph", fallback.walkSpeedTenthsMph),
+                inclineTenths = o.optInt("inclineTenths", fallback.inclineTenths),
+                restUntilTarget = o.optBoolean("restUntilTarget", fallback.restUntilTarget),
+                restSec = o.optInt("restSec", fallback.restSec),
+                targetHr = o.optInt("targetHr", fallback.targetHr),
+            )
+        } catch (_: Exception) {
+            fallback
+        }
+    }
+}
+
 /** What the next workout looks like. */
 data class WorkoutConfig(
     val sets: Int = 5,
@@ -134,6 +184,9 @@ data class UserSettings(
     val runMinRestSec: Int = 60,
     val runRestSec: Int = 90,
     val runTargetHr: Int = 130,
+    /** Baseline tests for rowing and walk/run (slam ball's are the baseline* fields above). */
+    val rowBaseline: MachineBaseline = MachineBaseline.ROW_DEFAULT,
+    val runBaseline: MachineBaseline = MachineBaseline.RUN_DEFAULT,
 ) {
     val birthday: LocalDate?
         get() = birthDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
@@ -148,6 +201,11 @@ data class UserSettings(
     val estimatedMaxHr: Int get() = 220 - age
 
     val maxHr: Int get() = if (maxHrOverride > 0) maxHrOverride else estimatedMaxHr
+
+    fun machineBaseline(a: Activity): MachineBaseline = if (a == Activity.RUN) runBaseline else rowBaseline
+
+    /** The recovery target a baseline test of [a] is timed to. */
+    fun baselineTarget(a: Activity): Int = if (a == Activity.SLAM) baselineTargetHr else machineBaseline(a).targetHr
 
     /** Heart rate that sets off the alarm. */
     val alarmBpm: Int get() = if (hrAlarmBpm > 0) hrAlarmBpm else maxHr
