@@ -1,10 +1,11 @@
 # Cardio Log
 
-An Android app for slam ball and rowing machine workouts, built around a Bluetooth chest strap (COOSPO
-H808S, or any strap that uses the standard Bluetooth Heart Rate service). For slam ball it counts slams
-by listening through the microphone; for rowing it runs your intervals. Either way it coaches with voice
-and beeps, and tracks how fast your heart rate recovers after each set or interval. (It started as
-"Slam Log".)
+An Android app for slam ball, rowing machine and treadmill walk/run workouts, built around a Bluetooth
+chest strap (COOSPO H808S, or any strap that uses the standard Bluetooth Heart Rate service). For slam
+ball it counts slams by listening through the microphone; for rowing it runs your intervals and reads
+the rower over Bluetooth; for walk/run it runs run and walk intervals and calls out the treadmill speeds.
+Every workout coaches with voice and beeps, and tracks how fast your heart rate recovers after each set
+or interval. (It started as "Slam Log".)
 
 <p>
   <img src="docs/screenshots/slam.jpg" width="200" alt="Counting slams during a set">
@@ -23,6 +24,9 @@ chest strap that uses the standard heart rate service works.
 Releases are built by GitHub Actions ([release.yml](.github/workflows/release.yml)) from the code in this repo.
 
 ## The headline metric: last slam → 130
+
+The same recovery clock runs in all three workouts: from the last slam, the end of a rowing interval, or
+the end of a run, until your heart rate falls to that workout's recovery target. The slam ball version:
 
 After every set, the app starts a clock at your **last slam** and stops it when your heart rate falls to
 your recovery target (130 bpm by default; change it in the Training workout section on Home). You see it:
