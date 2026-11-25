@@ -53,6 +53,15 @@ so they can't answer "is my recovery improving?" on their own. The **baseline te
 - Repeat it every couple of weeks. Trends → **Is my recovery improving?** compares the latest baseline
   with the first one (average time from last slam to 130, plus the first-minute heart rate drop) and
   answers in a sentence. Changes under 3 seconds or 5% count as "about the same".
+- **Baseline trends** (Baseline → Baseline trends: test vs. test) compares tests with each other. A
+  chart of peak heart rate against seconds to 130 for every set shows two consecutive tests at a time
+  (earlier gray and dashed, later blue and solid, each with a best-fit line), gliding to the next pair
+  every 4 seconds; Pause or drag the slider to pick a pair. Cards show average recovery, recovery rate
+  (how far HR had to fall, peak − 130, per second it took: adjusts for effort) and average peak, with
+  the change. Below it, every measure as "% better than the first test" (the average of the first two once there are 4+), up always better. Sets where
+  HR never went above 130 are left out, and a test with fewer than 2 such sets isn't charted (the screen
+  says which). The heart rate drop counts only when measured over a full minute. "+ 2 sample tests" adds
+  two made-up tests to preview it.
 - **By reps per set** (Trends) compares training workouts only with others at the same reps per set.
 - A workout can be marked or unmarked as a baseline from its summary screen. Baselines only count
   when every set was finished.

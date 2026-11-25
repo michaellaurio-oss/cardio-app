@@ -29,6 +29,7 @@ import com.laurio.slamlog.data.Session
 import com.laurio.slamlog.ui.AboutYouScreen
 import com.laurio.slamlog.ui.BaselineScreen
 import com.laurio.slamlog.ui.BaselineSettingsScreen
+import com.laurio.slamlog.ui.BaselineTrendsScreen
 import com.laurio.slamlog.ui.HistoryScreen
 import com.laurio.slamlog.ui.HomeScreen
 import com.laurio.slamlog.ui.RowerTestScreen
@@ -61,7 +62,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /** START is the first screen (strap + workout choice); HOME is the Slam Ball screen. */
-private enum class Screen { START, HOME, ROWING, RUN, ROWER_TEST, ROW_TRENDS, WORKOUT, SUMMARY, HISTORY, TRENDS, SETTINGS, ABOUT_YOU, BASELINE, BASELINE_SETTINGS }
+private enum class Screen { START, HOME, ROWING, RUN, ROWER_TEST, ROW_TRENDS, WORKOUT, SUMMARY, HISTORY, TRENDS, SETTINGS, ABOUT_YOU, BASELINE, BASELINE_SETTINGS, BASELINE_TRENDS }
 
 private fun neededPermissions(): Array<String> = buildList {
     if (Build.VERSION.SDK_INT >= 31) {
@@ -223,10 +224,16 @@ private fun AppRoot(vm: WorkoutViewModel, modifier: Modifier) {
                 vm,
                 onStartBaseline = { workoutFrom = Screen.HOME; vm.startBaseline(); screen = Screen.WORKOUT },
                 onTrends = { trendsBack = Screen.BASELINE; screen = Screen.TRENDS },
+                onBaselineTrends = { screen = Screen.BASELINE_TRENDS },
                 onBaselineSettings = { screen = Screen.BASELINE_SETTINGS },
                 onBack = { screen = Screen.HOME },
             )
             Screen.BASELINE_SETTINGS -> BaselineSettingsScreen(vm, onBack = { screen = Screen.BASELINE })
+            Screen.BASELINE_TRENDS -> BaselineTrendsScreen(
+                sessions = sessions.filter { it.activity == Activity.SLAM },
+                settings = settings,
+                onBack = { screen = Screen.BASELINE },
+            )
         }
     }
 }

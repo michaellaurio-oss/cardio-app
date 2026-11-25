@@ -37,6 +37,7 @@ fun BaselineScreen(
     vm: WorkoutViewModel,
     onStartBaseline: () -> Unit,
     onTrends: () -> Unit,
+    onBaselineTrends: () -> Unit,
     onBaselineSettings: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -111,6 +112,7 @@ fun BaselineScreen(
                 color = MaterialTheme.colorScheme.error,
             )
         }
+        OutlinedButton(onClick = onBaselineTrends, modifier = Modifier.fillMaxWidth()) { Text("Baseline trends: test vs. test") }
         OutlinedButton(onClick = onTrends, modifier = Modifier.fillMaxWidth()) { Text("Trends") }
 
         Spacer(Modifier.height(8.dp))
